@@ -1,0 +1,8 @@
+node_modules/
+*.log
+# evidence-bundle output (never commit binaries — see evidence-bundle/SKILL.md)
+/evidence-bundle/
+evidence-bundle-*/
+*.zip
+*.mp4
+.DS_Store
