@@ -54,3 +54,9 @@ node install.mjs --target /path/to/host-repo
 
 ## License
 MIT — see [LICENSE](LICENSE).
+
+## Proposed review harness
+
+[OGC-1560 specification](docs/ogc-1560-review-harness/specification.md) proposes a
+provider-independent PR review runner built on these skills. It includes source
+research, reference-code checks and a staged pilot; the harness is not implemented.
