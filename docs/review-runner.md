@@ -49,7 +49,7 @@ For a model review, add explicit settings to the plan:
 node review/cli.mjs plan \
   --repo /path/to/repository --base BASE --head HEAD \
   --application targeted --question 'Does this change preserve the agreed boundary?' \
-  --path src/consumer --context src/producer \
+  --path src/consumer.js --context src/producer.js \
   --requirements /path/to/accepted-requirements.txt \
   --rigor standard --adapter codex --model MODEL \
   --billing-mode subscription --review-seconds 300 \
