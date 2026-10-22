@@ -17,6 +17,9 @@ Captured 22 October 2026 from the user's requests in this conversation. This fil
 13. **Keep adoption proportionate.** Reuse existing repository CI, launchers and delivery tooling. Start semantic review in advisory mode, measure false alarms and missed defects, and avoid mandatory agent loops or new approval gates for already authorized engineering work.
 14. **Persist the work.** Keep these goals, a researched specification, validation results and phased acceptance criteria in code-qa and link them from OGC-1560.
 
+15. **Build the first version before piloting it.** Deliver and test a locally runnable harness, including one AI adapter and one working repository environment, before expanding integrations and evaluating it on real PRs. Controlled fixture tests are implementation work, not the pilot.
+16. **Boot an isolated environment of the PR when verification needs it.** Include required application services, pinned dependencies, synthetic fixtures, readiness checks, evidence capture and scoped cleanup. Source-only checks can skip startup. Reuse repository launchers without touching active developer or shared deployments.
+
 ## Current scope
 
 This task specifies and validates the design. It does not implement the full harness, change application behavior, install enforcement hooks, merge PRs or claim model-review reliability has already been established. A documentation branch/draft PR and the Jira update are the durable deliverables.

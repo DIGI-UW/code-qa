@@ -7,7 +7,7 @@
 | Goal from goals.md | Where the specification addresses it | Acceptance evidence required |
 | --- | --- | --- |
 | 1: revamp, not bolt-on | Existing-asset disposition table, shared procedure and migration/retirement plan. | New entry points use one rule source; superseded workflows are removed or become routing aliases. |
-| 2: general repository use | Core/repository ownership split; three different pilot repositories. | Same coordinator handles Java, frontend and distribution/configuration cases without analyzer rules in core. |
+| 2: general repository use | Core/repository ownership split; one initial environment and three intended adoption repositories. | Same coordinator handles Java, frontend and distribution/configuration cases without analyzer rules in core. |
 | 3: automated review | Trusted workflow, eligible PR events, preauthorized policy and idempotent publication. | A PR update starts the selected plan; superseded results cannot publish as current. |
 | 4: targeted review | Question/lens/path/range inputs and explicit coverage. | A focused question gets a focused answer and necessary neighbor tracing, without a whole-PR clean claim. |
 | 5: levels and applications | Independent application and rigor matrix. | Each supported application works at Mechanical and at a selected AI level; unsupported combinations are explicit. |
@@ -19,6 +19,8 @@
 | 12: honest evidence | Separate execution/assessment, anchored evidence and immutable snapshot. | Reject missing/malformed output, stale revisions and zero-test claims. |
 | 13: proportionate adoption | Advisory rollout, existing CI adapters, hooks later, no automatic repair loop. | Pilot records false alarms, missed defects and maintainer time without changing merge authority. |
 | 14: persistence | goals.md, specification, research record, validation script/results, Jira and draft PR. | Links resolve and future work has a single documented scope. |
+| 15: implement before pilot | M1–M3 deliver a tested local first version; M4 expands integrations; M5 evaluates and pilots. | Working CLI, environment and one AI adapter demonstrated before any real-PR pilot. |
+| 16: boot the isolated PR | Explicit environment lifecycle and repository launcher adapter. | Actual reviewed source starts with required services; readiness, scoped probes, retained evidence, concurrent isolation and teardown are verified. |
 
 ## Comparison with the requested reference systems
 
@@ -51,6 +53,9 @@ This is a desk review of the proposed rules against the inspected procedures, no
 | A managed reviewer supplies comments but no test logs/tool transcript. | Import anchored findings with the available evidence; request independent verification if needed. | Call the import a code-qa Verified run or invent test results. |
 | Mechanical-only request arrives with no model account. | Execute mechanical path without a model request. | Invoke an LLM to decide whether mechanical checks passed. |
 | AI budget expires or provider fails. | Preserve partial findings and explicit reason; no silent escalation. | Produce no-findings/green or switch models and spend more. |
+| Runtime review starts an old published image despite changed PR source. | Reject attribution to the PR; build/run the changed components or report the missing verification. | Treat a healthy unrelated build as PR evidence. |
+| Stack startup fails before a scenario runs. | Record startup failure, collect logs and clean up owned resources. | Call the scenario passed or treat startup failure as a reproduced behavior defect. |
+| Two reviews run concurrently and one is cancelled. | Keep resources and data separate; clean up only the cancelled run and retain its evidence. | Reuse shared database state or stop/prune another run or developer stack. |
 
 ## What has actually run
 
@@ -62,9 +67,10 @@ This is a desk review of the proposed rules against the inspected procedures, no
 
 1. Implement and test the packet/result schema, outcome state machine, budget handling and adapter capability negotiation.
 2. Test mechanical mode with model access disabled; test paid modes with fake adapters that count every call and enforce declared limits.
-3. Exercise both Codex and Claude invocation and external-import adapters. Verify version-specific structured output, cancellation, ambient-config suppression and available usage accounting.
-4. Run adversarial trust-boundary fixtures: hostile PR instructions, changed rule files, fabricated artifacts, symlink escapes, missing dependencies, stale heads and malicious test commands. No secrets/writer token may reach untrusted execution.
-5. Run the held-out reviewer-quality experiment and then the report-only live-PR pilot. Report harmful fix suggestions, false alarms on valid cleanup, missed consequential defects and cost as separate outcomes.
-6. Audit installed consumers before release so old conflicting skills and new rules do not coexist. Verify rollback to the prior pinned release.
+3. Boot a real fixture application from the reviewed revision using one repository adapter. Test readiness, meaningful passing/failing assertions, startup failure, timeout, cancellation, concurrent isolation and scoped teardown. Confirm source-only mode does not boot the stack.
+4. Exercise one real AI adapter for the first usable version, then both Codex and Claude invocation and external-import adapters before the pilot. Verify version-specific structured output, cancellation, ambient-config suppression and available usage accounting.
+5. Run adversarial trust-boundary fixtures: hostile PR instructions, changed rule files, fabricated artifacts, symlink escapes, missing dependencies, stale heads and malicious test commands. No secrets/writer token may reach untrusted execution.
+6. After the implemented harness passes its acceptance tests, run the held-out reviewer-quality experiment and then the report-only live-PR pilot. Report harmful fix suggestions, false alarms on valid cleanup, missed consequential defects and cost as separate outcomes.
+7. Audit installed consumers before release so old conflicting skills and new rules do not coexist. Verify rollback to the prior pinned release.
 
 No research paper or reference harness substitutes for these acceptance tests.

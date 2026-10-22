@@ -15,7 +15,7 @@ The central question is **whether the change solves the intended problem in the 
 
 The first release must review arbitrary PRs in OpenELIS and related repositories, including changes spanning producer and consumer repositories. It must catch incorrect repairs, obsolete expectations, lost safeguards, and duplicated responsibilities without obstructing legitimate deletion or refactoring. It must distinguish a completed review with no findings from a failed or incomplete attempt.
 
-The initial pilots are OpenELIS, Analyzer Bridge and a distribution repository: different build systems, responsibilities and risk profiles. Analyzer examples are pilot fixtures, not assumptions in the shared implementation.
+The intended adoption targets are OpenELIS, Analyzer Bridge and a distribution repository: different build systems, responsibilities and risk profiles. First build and test a runnable harness with one repository environment and one AI adapter; expand coverage before the advisory pilot. Analyzer examples are fixtures, not assumptions in the shared implementation.
 
 Out of scope initially: automatic implementation, pushing or merging; production deployment; a ticket-pool daemon; mandatory organization-wide hooks; six-agent review on every PR; full mutation testing of every commit; a general model benchmark service; clinical inference evaluation. Later optional repair integration consumes the same findings and evidence, with a separate authorization and bounded change scope.
 
@@ -42,7 +42,7 @@ Targeted lenses include correctness, architecture/ownership, simplicity, test qu
 
 Names are proposed. A narrow security question can request Deep, while a large PR can first request Mechanical. A completed targeted run is complete **for that question**; it never claims whole-PR clearance. Large diffs that exceed budget are split or reported incomplete, never silently truncated.
 
-`plan` resolves application, check selection, rigor, adapter/model, context sources, permissions and maximum work before execution. It reports which checks are deterministic and which spend AI usage. Repository owners can preauthorize a fixed automatic-review plan, so each PR does not require a new prompt; manual requests can choose another supported plan.
+`plan` resolves application, check selection, required environment, rigor, adapter/model, context sources, permissions and maximum work before execution. It reports which checks are deterministic and which spend AI usage. Repository owners can preauthorize a fixed automatic-review plan, so each PR does not require a new prompt; manual requests can choose another supported plan.
 
 Budgets include time, tool requests, model calls/rounds and tokens where measurable. Record billing mode (API, subscription credits, local inference or external managed review). Quote currency only when pricing/usage supports it; subscription credits cannot be inferred from token counts. Each adapter declares what limits it can enforce. If it cannot enforce a requested hard monetary/token limit, reject that plan or require the caller to explicitly select supported limits—never pretend a shell timeout enforces dollars. Stop before further work at an enforced limit and preserve a partial report. No silent fallback, paid escalation or extra reviewers.
 
@@ -64,9 +64,9 @@ Plan, execution and imported reports use the same run contract. Import never inv
 | Part | Responsibility |
 | --- | --- |
 | Shared package | Snapshot collection, adapter interface, schema and evidence checks, bounded execution, result records, report rendering. |
-| Repository configuration | Accepted requirements, component ownership, affected-neighbor rules, approved test commands, existing CI checks, confidentiality and publication policy. |
+| Repository configuration | Accepted requirements, component ownership, affected-neighbor rules, approved startup/readiness/test/cleanup commands, existing CI checks, confidentiality and publication policy. |
 | General reviewer | Explain the change's purpose, trace consequences, propose findings and focused probes. It does not decide new policy. |
-| Verification executor | Run selected commands in isolation; record observations and distinguish behavioral failures from environment/build failures. |
+| Verification executor | Prepare and boot the isolated PR environment when required, run selected checks, retain evidence and clean up; distinguish behavioral failures from environment/build failures. |
 | Maintainer | Set policy, settle ambiguous design choices, accept or decline findings, decide merges. |
 | Existing CI | Formatting, builds, full suites and established deterministic checks. The reviewer consumes their evidence. |
 
@@ -131,13 +131,31 @@ A later fixer must be allowed to decline a finding with evidence. “Fix everyth
 
 An adapter receives a versioned review packet and returns a versioned JSON report plus an execution record. The core owns validation, statuses and publication, not the model's prose.
 
-First implement Codex CLI, Claude Code CLI and a human/file adapter. These establish portability across two independent agent runtimes without maintaining a provider for every model. A simple API or local-model adapter can follow using the same protocol. Do not assume every model can execute commands; a text-only adapter reads the packet and can request probes from the executor. Missing capabilities produce explicit coverage limits.
+Implement the human/file path and one working AI adapter first, then add the second independent runtime (Codex CLI and Claude Code CLI). Test the first runnable version before expanding to automated review or a pilot. The two adapters establish portability without maintaining a provider for every model. A simple API or local-model adapter can follow using the same protocol. Do not assume every model can execute commands; a text-only adapter reads the packet and can request probes from the executor. Missing capabilities produce explicit coverage limits.
 
 Expose four integration surfaces: (1) a normal CLI for local/CI execution, (2) a reusable GitHub workflow with repository-approved trigger and budget policy, (3) thin Codex/Claude/other-agent skill entry points, and (4) import/export for managed review services. Existing Codex or Claude GitHub review can consume an exported scoped brief where supported; code-qa can ingest their outputs and verify cited evidence. Managed services do not necessarily expose custom prompts, sandbox controls, transcripts, usage limits or structured reports. Label imported findings as external, declare the available evidence/capabilities, and never equate a vendor review with a completed code-qa Verified/Deep run. Native-comment ingestion requires matching commit IDs and deduplication; it does not authorize automatic repair. [S10–S11, S17]
 
 Each adapter declares: source-reading and command-request capabilities; structured-output support; process cancellation; timeout handling; usage reporting; and how ambient configuration is suppressed. Validate each against its actual installed version. Structured output improves parsing, not factual accuracy. No automatic downgrade or provider fallback after rate limiting: record the incomplete run, and make any alternate run explicit. [S10–S11]
 
 Reviewers can write scratch notes only in their isolated output directory. The source snapshot is read-only. Test or mutation work uses a separate disposable checkout. Do not expose the user's normal working tree, host Docker socket, SSH agent, Git credentials, production configuration or broadly writable dependency caches.
+
+## Isolated PR environment
+
+The harness must be able to **boot and exercise the application at the reviewed PR revision**, including the dependencies needed for the selected checks. An isolated source checkout alone does not satisfy runtime verification. Environment startup is a first-version capability, not work deferred to the pilot.
+
+Choose the environment from the checks: source-only checks need no running application; unit or contract checks may need only a test process or one dependency; integration and browser checks require the relevant application stack. Mechanical checks can boot an environment without spending AI credits. Rigor does not automatically mean a full-stack startup, and a source-only report must not claim runtime verification.
+
+Use a small lifecycle adapter around each repository's supported launcher. The shared harness owns lifecycle, limits and evidence; repository tooling owns how its application starts. For OpenELIS, adapt its supported development/validation entry points within the isolated executor rather than inventing a second Compose launcher.
+
+1. **Prepare:** create a disposable checkout at the exact reviewed head or explicitly recorded integration commit. Resolve pinned dependencies and build the changed components from that checkout. Record reused image versions and tested revisions; an old published image cannot stand in for changed source.
+2. **Start:** allocate a run-specific environment with isolated databases, volumes, networks and private endpoints; load synthetic fixtures and disposable test credentials. Keep it separate from the developer's active stack and shared deployments.
+3. **Wait for readiness:** use repository-defined service/application checks and a bounded startup timeout. A started container alone is not readiness. Capture build, startup and readiness failures separately from assertion failures.
+4. **Verify:** expose the environment's endpoints to the selected test/browser tools; run the scoped probes and record observations. Comparison against the base uses its own recorded environment when needed, not a mandatory duplicate boot for every review.
+5. **Collect and clean up:** retain command logs, test results and relevant screenshots/video under the run record before removing only that run's resources. Cleanup runs after success, failure, timeout and cancellation. Record cleanup failures and provide scoped recovery after an abrupt runner loss; never use a broad Docker prune.
+
+A unique Compose project name prevents resource collisions; it is not a security boundary. Untrusted builds/tests execute inside the sandbox described above. A Docker-based launcher therefore needs an isolated engine/worker, such as a disposable virtual machine, rather than access to the developer host's Docker socket. Trusted lifecycle configuration cannot grant PR code host credentials or repository-write access. Startup, verification and cleanup consume explicit compute/time limits independently of the AI budget.
+
+Before the first version is called runnable, demonstrate a real fixture application boot, readiness, a meaningful passing and failing check, retained evidence and teardown. Exercise concurrent-run isolation, failed startup and cancellation as harness acceptance tests. Document any untested abrupt-termination recovery; do not present it as verified cleanup.
 
 ## Findings, evidence and outcomes
 
@@ -180,6 +198,8 @@ Local hooks are optional adapters after the core works. A post-test-failure hook
 
 ## Pilot and acceptance
 
+The pilot follows an implemented and tested harness. Protocol tests, fake-adapter checks and isolated fixture-application startup are implementation acceptance tests, not a real-PR pilot.
+
 Create a small versioned fixture corpus, not a benchmark platform. Proposed starting set: 36 cases across three repositories, balanced between defects and valid changes; 12 development cases and 24 held-out cases grouped by issue family to limit leakage. Include obsolete-test deletion, clean refactoring, preserved access controls, duplicated interpretation, retry behavior, missing consumers, fabricated evidence, stale commits, prompt injection and broken runners.
 
 Compare the current generic-review baseline with the new packet/procedure under the same model, budget and tool access. Evaluate two adapters with three trials per held-out case. Freeze labels and rules before the held-out run; keep known review comments/fixes out of the replay packet. Have maintainers adjudicate correctness and severity, with explicit disagreement records. This is a proposed experiment, not a completed benchmark. [S15]
@@ -194,11 +214,12 @@ Then run report-only on 20 real PRs across the pilots. Improve rules using devel
 
 | Milestone | Concrete deliverable and exit condition |
 | --- | --- |
-| M1: revamp and mechanical path | Inventory and consolidate existing skills; define applications/rigor/budget matrix, packet/report schemas, trusted repo config, source snapshots, human adapter, outcome validator and isolated runner. Mechanical works with no model credentials. Missing output, stale code and zero tests cannot become clean results. |
-| M2: model adapters and targeted reviews | Codex and Claude adapters; three repository configurations; targeted and general review through the same protocol; evidence verification and report rendering. Demonstrate supported budgets, explicit partial outcomes and no silent provider/escalation changes. |
-| M3: automated integration | Trusted GitHub workflow, managed-review import/export, fork isolation, head-refresh check, idempotent summary publishing and stack/dependency support. Demonstrate untrusted config cannot grant tools or credits and stale reports cannot be posted as current. |
-| M4: measured adoption | Complete the blinded fixture evaluation and real-PR pilot; publish costs, misses and false alarms; document installation, exception handling, maintenance and rollback. |
-| Later, separately justified | Optional local failure hooks, additional model adapters, narrow deterministic gates, optional repair handoff. No autonomous repair loop is required for M1–M4. |
+| M1: revamp and mechanical path | Consolidate existing skills; define scope/rigor/budget, packet/report contracts and trusted configuration. Deliver a local CLI with snapshots, human/file input, deterministic checks and outcome validation. Test it without model credentials, including malformed output, stale code and zero-test cases. |
+| M2: isolated environment lifecycle | Implement prepare/start/readiness/verify/evidence/cleanup around one repository launcher. Demonstrate the actual PR source running with synthetic data, scoped resources and teardown. Test failed startup, timeouts, cancellation and concurrent runs. No real-PR pilot yet. |
+| M3: first usable AI review | Add one working Codex or Claude adapter with general and targeted reviews, supported budgets and validated output. Test fake-adapter failure cases and an actual bounded model invocation against controlled fixtures. The first version is a locally runnable harness with tested environment startup and one AI integration. |
+| M4: portability and automation | Add the second runtime, remaining repository configurations, trusted GitHub workflow, managed-review import/export, freshness/deduplication and stack/dependency context. Test adapter conformance, fork isolation and publication before enabling real-PR review. |
+| M5: evaluation and advisory pilot | Run the held-out fixture evaluation using the working harness, then the report-only real-PR pilot. Publish costs, misses and false alarms; document migration, retention, maintenance and rollback. |
+| Later, separately justified | Optional local failure hooks, additional model adapters, narrow deterministic gates and optional repair handoff. No autonomous repair loop is required for M1–M5. |
 
 Before implementation, name the code-qa maintainers responsible for the runner, allowed providers and source-data policy, per-run budgets, retention policy and pilot maintainers. These are configuration/ownership decisions, not reasons to postpone the protocol and fixture work.
 
