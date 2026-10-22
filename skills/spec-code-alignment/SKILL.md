@@ -10,6 +10,9 @@ description: |
 
 # Spec ↔ Code Alignment
 
+Use the [shared review procedure](../review-change/SKILL.md) for requirement authority and evidence.
+
+
 In spec-driven workflows, the code and the written spec drift apart — usually
 because a live design conversation got ahead of the paperwork. The job is not to
 assume the spec is right and "fix" the code to match; it is to determine **which

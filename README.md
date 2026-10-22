@@ -15,22 +15,22 @@ encode that discipline.
 
 | Skill | What it does |
 |---|---|
+| **review-change** | Shared requirement, ownership and evidence procedure for general and targeted reviews. |
 | **evidence-bundle** | Turn a Playwright/E2E run into a structured, shareable proof — screenshots + MP4 + a narrated report — and draft the PR/Slack surfaces. Deterministic bundler script + LLM narrative. |
-| **meaningful-test-coverage** | Design + adversarially verify no-theater tests at the right level per layer; prove each guard would fail on the old code. Multi-agent workflow. |
+| **meaningful-test-coverage** | Assess meaningful tests at the right level, including legitimate refactoring and obsolete-test removal. |
 | **simplicity-review** | Review a change for over-engineering — speculative generality, gold-plating, dead code, needless indirection — and propose the simplest version that still meets the spec. The mirror of meaningful-test-coverage. |
-| **spec-code-alignment** | Verify spec/design artifacts match the shipped code, catalog drift, remediate the lagging side — grounded in the code as source of truth. |
-| **cross-repo-companion-pr** | Manage a change spanning a primary repo + a companion config/distro repo as paired, backward-compatible, cross-linked PRs. |
-| **commit-pr-hygiene** | Team-specific commit/PR rules: format cold (defeat stale caches), timeless code comments, conventional trailer-clean messages, draft-before-posting. |
+| **spec-code-alignment** | Verify spec/design artifacts match the shipped code, catalog drift, remediate the lagging side — distinguishing observed behavior from accepted requirements. |
+| **cross-repo-companion-pr** | Review cross-repository contracts and explicit independent, ordered or atomic delivery. |
+| **commit-pr-hygiene** | Formatting, comments, commit scope and authorized publication policy. |
 
 Each skill is a directory under `skills/<name>/` with a `SKILL.md` (the agent-facing
-instructions) and, where useful, a `scripts/` helper or a `workflow.template.js`.
+instructions) and, where useful, a `scripts/` helper.
 
 ## Layout
 ```
 skills/<name>/
   SKILL.md                 # YAML frontmatter (name, description) + the procedure
   scripts/*.mjs            # optional deterministic helper(s)
-  workflow.template.js     # optional multi-agent workflow template
 ```
 
 ## Install
@@ -50,13 +50,17 @@ node install.mjs --target /path/to/host-repo
 
 ## Requirements
 - `evidence-bundle`: `ffmpeg` (webm→mp4) and `zip` on PATH.
-- The workflow-based skills assume an agent runtime with a `Workflow`/subagent tool.
+- Local review runner: Node.js 20+. Optional model review: Codex CLI. OpenELIS execution: Lima 2+, virtualization and sufficient build resources.
 
 ## License
 MIT — see [LICENSE](LICENSE).
 
-## Proposed review harness
+## Local review harness (v0.1)
 
-[OGC-1560 specification](docs/ogc-1560-review-harness/specification.md) proposes a
-provider-independent PR review runner built on these skills. It includes source
-research, reference-code checks and a staged pilot; the harness is not implemented.
+The [runner guide](docs/review-runner.md) covers mechanical checks, one Codex reviewer,
+and a disposable OpenELIS VM. Start with `node review/cli.mjs --help`; run the harness
+acceptance tests with `npm test`. Model-assisted review is an explicit choice.
+
+The [OGC-1560 specification](docs/ogc-1560-review-harness/specification.md) describes
+the broader roadmap. The first version does not implement automatic PR publication,
+Claude integration, Verified/Deep review or a model-quality pilot.

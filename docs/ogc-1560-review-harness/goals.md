@@ -22,7 +22,7 @@ Captured 22 October 2026 from the user's requests in this conversation. This fil
 
 ## Current scope
 
-This task specifies and validates the design. It does not implement the full harness, change application behavior, install enforcement hooks, merge PRs or claim model-review reliability has already been established. A documentation branch/draft PR and the Jira update are the durable deliverables.
+The user has authorized implementing, testing and pushing the first version: OpenELIS is the first isolated environment and one AI reviewer is included. Broader automation, additional adapters and the quality pilot remain later work. Do not change application behavior, install enforcement hooks, merge PRs or claim model-review reliability from a small smoke test.
 
 ## Decisions still open
 

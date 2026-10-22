@@ -4,7 +4,7 @@ description: |
   Apply disciplined commit and pull-request hygiene before pushing — format with the
   repo's own tooling (and defeat stale formatter caches), write timeless code
   comments (no dev-path narration), keep commit messages conventional and trailer-
-  clean, and draft any outward PR comment/review for human approval before posting.
+  clean, and follow the task authorization and repository publication policy for outward PR comments/reviews.
   Use before every commit and before opening or commenting on a PR.
 ---
 
@@ -39,12 +39,9 @@ change ever happened. They must NOT narrate the development path:
   a gotcha, a non-obvious constraint). If it would read oddly in code written from
   scratch, it belongs in the commit message or PR, not the source.
 
-## Outward actions: draft before posting
+## Outward actions
 
-Anything that leaves the local machine and is hard to retract — a PR comment, a review,
-a posted message — gets **drafted and shown for approval first**. Never post to GitHub
-(or Slack, etc.) without the human seeing the exact text. Opening the PR is fine; the
-*outward commentary* is what gets the draft gate.
+Use the task's explicit authorization and trusted repository publication policy. A preauthorized automated review may publish its bounded summary without asking again on each run. Otherwise prepare the concrete message before requesting the missing authorization. A review request alone does not authorize repairs, pushing, merging or resolving human discussions. The code-qa local runner does not publish anything.
 
 ## PR lifecycle
 
@@ -60,4 +57,4 @@ a posted message — gets **drafted and shown for approval first**. Never post t
 - Tree formatted with the repo's tooling (cache cleared if a cold-CI mismatch is possible).
 - Conventional, trailer-clean commit message; rationale in the body, not in code.
 - Code comments are timeless technical facts — zero dev-path narration.
-- Any outward PR/message text shown for approval before it is posted.
+- Any outward publication is within the task authorization and trusted repository policy.

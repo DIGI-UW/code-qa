@@ -1,6 +1,8 @@
 # OGC-1560: code-qa revamp for automated and targeted review
 
-**Specification proposal · 22 October 2026 · implementation not started**
+**Specification roadmap · 22 October 2026**
+
+The bounded first version is being implemented; see the [runner guide](../review-runner.md) and [validation status](implementation-status.md). Requirements below beyond that documented scope remain future work.
 [Jira](https://uwdigi.atlassian.net/browse/OGC-1560) · [agreed goals](goals.md) · [research and validation](research-and-validation.md)
 
 ## Decision
@@ -80,7 +82,7 @@ Current baseline: `30528d176bd128b4765242d130f38ca9fb85d7b8`, verified against u
 | --- | --- |
 | `simplicity-review` | Keep requirement-first review, architecture audit and complete removal. Clarify that keeping tests green includes updating/deleting obsolete tests. |
 | `spec-code-alignment` | Keep its distinction between stale documentation and code violating an intended requirement. Code establishes what runs, not what ought to run. Do not claim its current procedure blindly treats code as authoritative; it explicitly warns against diluting requirements. |
-| `meaningful-test-coverage` | Keep appropriate test levels and meaningful assertions. Limit old-code/red-test requirements to applicable behavioral changes; add the refactoring/removal cases and distinct build-error outcome. Its multi-agent template remains optional. |
+| `meaningful-test-coverage` | Keep appropriate test levels and meaningful assertions. Limit old-code/red-test requirements to applicable behavioral changes; add the refactoring/removal cases and distinct build-error outcome. Retire its runtime-specific multi-agent template; any future multi-reviewer recipe needs a separate explicit plan. |
 | `cross-repo-companion-pr` | Split contract review from delivery actions. Its current universal additive/any-order compatibility rule is unsuitable for approved cutovers: configuration must distinguish independent rollout, ordered migration and atomic version-set deployment. Never invent fallback code merely to satisfy that rule. |
 | `evidence-bundle` | Reuse suitable artifact/report conventions. Browser screenshots and videos stay optional; ordinary PR review does not require a visual evidence bundle. |
 | `commit-pr-hygiene` | Separate deterministic checks, optional editorial guidance and publication policy. Allow repository-preauthorized automatic summaries while preserving explicit authorization for human-facing messages and merge actions. |
