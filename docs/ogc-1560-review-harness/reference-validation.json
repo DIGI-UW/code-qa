@@ -1,0 +1,42 @@
+{
+  "source_commit": "26d0e53b24c6cb899370ee5c69c800b2f17020e1",
+  "scope": "offline function and coordinator characterization with external operations stubbed",
+  "observations": [
+    {
+      "case": "build_error_counts_as_red",
+      "observed": true
+    },
+    {
+      "case": "zero_tests_explicit_status_rejected",
+      "observed": false
+    },
+    {
+      "case": "exit_zero_without_tests_counts_as_green",
+      "observed": true
+    },
+    {
+      "case": "unresolved_blocker_exit_status",
+      "observed": 0
+    },
+    {
+      "case": "unverified_evidence_string_keeps_blocking",
+      "observed": true
+    },
+    {
+      "case": "missing_findings_field_exit_status",
+      "observed": 0
+    },
+    {
+      "case": "missing_findings_field_becomes_empty",
+      "observed": []
+    },
+    {
+      "case": "stale_reviewer_head_exit_status",
+      "observed": 0
+    },
+    {
+      "case": "stale_reviewer_head_overwritten",
+      "observed": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  ]
+}
