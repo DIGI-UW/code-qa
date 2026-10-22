@@ -22,7 +22,12 @@ export async function command(argv, { cwd, env = process.env, input, timeoutMs =
     };
     const stop = () => {
       kill('SIGTERM');
-      killTimer ??= setTimeout(() => kill('SIGKILL'), 1000);
+      killTimer ??= setTimeout(() => {
+        kill('SIGKILL');
+        // An escaped descendant (for example an SSH control master) can keep the
+        // pipes open after its parent exits. Release them so VM cleanup can run.
+        child.stdin.destroy(); child.stdout.destroy(); child.stderr.destroy();
+      }, 1000);
     };
     const abort = () => { cancelled = true; stop(); };
     signal?.addEventListener('abort', abort, { once: true });

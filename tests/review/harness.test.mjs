@@ -241,3 +241,28 @@ test('generic installation carries the shared procedure with focused skills', as
     assert.equal(await readFile(join(installed, skill, target), 'utf8'), common);
   }
 });
+
+test('cancellation releases pipes held by an escaped descendant so cleanup can run', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'code-qa-escaped-process-'));
+  const pidFile = join(dir, 'escaped.pid');
+  let escapedPid;
+  t.after(async () => {
+    if (escapedPid) { try { process.kill(-escapedPid, 'SIGKILL'); } catch {} }
+    await rm(dir, { recursive: true, force: true });
+  });
+  // Like a daemonized SSH master, this descendant has its own group but inherits
+  // the parent's output streams. Ordinary group termination cannot close them.
+  const script = `const {spawn}=require('node:child_process');const fs=require('node:fs');const c=spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{stdio:'inherit',detached:true});fs.writeFileSync(${JSON.stringify(pidFile)},String(c.pid));setInterval(()=>{},1000);`;
+  const controller = new AbortController();
+  const running = command([process.execPath, '-e', script], { signal: controller.signal, timeoutMs: 10_000 });
+  for (let i = 0; i < 100 && !escapedPid; i++) {
+    try { escapedPid = Number(await readFile(pidFile, 'utf8')); } catch { await new Promise(resolve => setTimeout(resolve, 10)); }
+  }
+  assert.ok(escapedPid, 'escaped child started');
+  controller.abort();
+  let timer;
+  try {
+    const result = await Promise.race([running, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Cancellation never released inherited pipes')), 4000); })]);
+    assert.equal(result.cancelled, true);
+  } finally { clearTimeout(timer); }
+});

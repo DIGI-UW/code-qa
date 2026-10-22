@@ -79,8 +79,10 @@ unsupported. Context omissions produce a partial model review, never clean clear
 
 ## OpenELIS lifecycle
 
-The worker has no host filesystem mounts, forwarded SSH agent, host Docker socket
-or forwarded application ports. It has its own Docker engine. It fetches the exact
+The worker has no host workspace/home mounts, forwarded SSH agent, host Docker
+socket or forwarded application ports. macOS VZ supplies its Rosetta platform share
+for architecture translation; that is the only shared filesystem observed in the
+live test. The worker has its own Docker engine. It fetches the exact
 public OpenELIS commit and uses its supported `scripts/dev-stack up --build
 --no-scenarios` launcher. The selected revision must contain that interface and its
 pinned dependencies must be accessible. No application checkout on the host changes.

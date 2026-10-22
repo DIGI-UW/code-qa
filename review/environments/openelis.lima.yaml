@@ -1,4 +1,4 @@
-# A disposable worker: no host mounts, forwarded agent, or application ports.
+# A disposable worker: no host workspace mounts, forwarded agent, or application ports.
 minimumLimaVersion: 2.0.0
 base:
 - template:_images/ubuntu-24.04
@@ -17,6 +17,7 @@ ssh:
 portForwards:
 - guestPortRange: [1, 65535]
   guestIP: 0.0.0.0
+  guestIPMustBeZero: false
   proto: any
   ignore: true
 provision:

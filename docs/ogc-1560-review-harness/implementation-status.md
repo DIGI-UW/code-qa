@@ -12,11 +12,13 @@
 
 ## Executed validation so far
 
-- 24 offline acceptance tests passed, including malformed/stale output, missing evidence, scope omission, failed startup, zero tests, cancellation, cleanup failure, subprocess-group termination and installation links.
+- 25 offline acceptance tests passed, including malformed/stale output, missing evidence, scope omission, failed startup, zero tests, cancellation, cleanup failure, subprocess-group termination and installation links.
 - Seven skill definitions passed the repository linter; the shared skill passed Skill Creator validation; Lima validated the worker configuration.
 - Real Codex smokes: a seeded double-conversion defect was identified with matching source quotations; an approved deletion of an unused parser and its obsolete tests completed with no findings. These two cases are integration evidence, not an accuracy benchmark.
-- Real cancellation: a second VM reached readiness, was cancelled and removed, while the primary OpenELIS worker remained running.
+- Real cancellation: a second VM reached readiness, was cancelled and removed, while the primary OpenELIS worker remained running. A later cancellation during a source build exposed an escaped SSH process holding output pipes open; the scoped recovery command removed that worker. Cancellation now closes retained streams after its termination grace period, with a regression test using a real detached descendant.
 - OpenELIS PR #4798 at 556f35d6708f28ec32659a9f25a5ab5e80c268a4 built from source in a fresh VM and reached login readiness. Valid login and frontend document assertions passed. The negative-login probe expected the wrong response shape; it is now aligned with the source contract (401 plus `error.invalidcredentials`) and covered by a real-HTTP regression test. A new full run will verify the correction. Both earlier workers were removed, including an initial startup failure caused by Docker group activation.
+
+- Live isolation inspection found that Lima requires `guestIPMustBeZero: false` to apply its forwarding exclusion to loopback listeners as well as wildcard binds. The rule is corrected; a fresh worker will verify both bind types. The worker has no user filesystem mounts; macOS supplies a Rosetta platform share.
 
 ## Remaining before delivery
 
