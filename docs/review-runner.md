@@ -15,7 +15,8 @@ never repairs code, pushes, comments on a PR or merges.
   macOS uses VZ/Rosetta; Linux needs Lima's compatible virtualization prerequisites.
   Linux execution has not yet been validated by this implementation.
 
-No npm dependencies are required. `npm test` runs offline harness acceptance tests;
+No npm dependencies are required. `npm test` runs offline harness acceptance tests
+(with Python 3 for the HTTP probe contract);
 `npm run lint` validates the installed skill definitions. Neither spends AI credits.
 
 ## Plan, then execute

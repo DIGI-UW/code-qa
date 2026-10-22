@@ -1,28 +1,32 @@
 # First version implementation and validation
 
-22 October 2026. Scope: local mechanical checks, one Codex reviewer and a disposable OpenELIS environment. No merging, automatic publication, second model adapter or live-PR quality pilot.
+22 October 2026. Implemented and pushed as [code-qa PR #2](https://github.com/DIGI-UW/code-qa/pull/2), following the [specification PR #1](https://github.com/DIGI-UW/code-qa/pull/1). Nothing merged. This is a local first version, not the broader model-quality pilot.
 
-## Implemented
+## Delivered
 
-- Local plan/run/report commands, immutable source packets, targeted/general scope and explicit limits.
-- Mechanical execution without AI credentials; structured output and evidence validation; separate execution and assessment states.
-- OpenELIS adapter using a Lima worker and the repository's existing source launcher; authentication smoke checks, evidence capture, scoped teardown and recovery command.
-- One packet-only Codex session with explicit model/billing mode, no repair/tools, bounded time and recorded usage.
-- Shared review procedure used by the runner and focused skills. Removed mandatory inversion/multi-agent workflow and universal additive rollout policy.
+- Plan/run/report commands with exact committed revisions, general or targeted scope, explicit limits and retained JSON/Markdown evidence.
+- Mechanical execution without AI credentials; separate execution and assessment states; missing/stale/fabricated evidence cannot become a clean review.
+- An OpenELIS adapter around the repository's source launcher, inside a disposable Lima worker with its own Docker engine and database.
+- One Codex reviewer using captured source and check results, with tools disabled, an explicit model/billing mode, a time limit and recorded token usage.
+- One shared review procedure used by the runner and focused skills. Removed the mandatory inversion/multiple-agent workflow and universal additive-rollout policy.
 
-## Executed validation so far
+## Executed validation
 
-- 25 offline acceptance tests passed, including malformed/stale output, missing evidence, scope omission, failed startup, zero tests, cancellation, cleanup failure, subprocess-group termination and installation links.
-- Seven skill definitions passed the repository linter; the shared skill passed Skill Creator validation; Lima validated the worker configuration.
-- Real Codex smokes: a seeded double-conversion defect was identified with matching source quotations; an approved deletion of an unused parser and its obsolete tests completed with no findings. These two cases are integration evidence, not an accuracy benchmark.
-- Real cancellation: a second VM reached readiness, was cancelled and removed, while the primary OpenELIS worker remained running. A later cancellation during a source build exposed an escaped SSH process holding output pipes open; the scoped recovery command removed that worker. Cancellation now closes retained streams after its termination grace period, with a regression test using a real detached descendant.
-- OpenELIS PR #4798 at 556f35d6708f28ec32659a9f25a5ab5e80c268a4 built from source in a fresh VM and reached login readiness. Valid login and frontend document assertions passed. The negative-login probe expected the wrong response shape; it is now aligned with the source contract (401 plus `error.invalidcredentials`) and covered by a real-HTTP regression test. A new full run will verify the correction. Both earlier workers were removed, including an initial startup failure caused by Docker group activation.
+The tested runtime implementation is `6a7c913353f4dbd6d918178b18f348c184061070`; later changes in this PR record documentation and evidence.
 
-- Live isolation inspection found that Lima requires `guestIPMustBeZero: false` to apply its forwarding exclusion to loopback listeners as well as wildcard binds. The rule is corrected; a fresh worker will verify both bind types. The worker has no user filesystem mounts; macOS supplies a Rosetta platform share.
+- **25 automated tests passed locally and in [GitHub CI](https://github.com/DIGI-UW/code-qa/actions/runs/39862314818/job/120115805157).** They cover scope/freshness, malformed and invented output, context omissions, startup/check failures, zero assertions, cleanup, process cancellation (including escaped descendants), the actual HTTP authentication response contract and installed skill links.
+- **Seven skill definitions passed validation.** The shared skill passed Skill Creator validation; Lima validated the worker configuration; local documentation links resolved.
+- **Real OpenELIS startup and checks passed.** PR #4798 at `556f35d6708f28ec32659a9f25a5ab5e80c268a4` built from source with its recorded Bridge/mock dependencies. The empty database initialized and login readiness completed. Valid administrator login, rejection of an incorrect password and the frontend application-root document all passed.
+- **The combined environment/reviewer run completed.** One Codex session consumed the captured authentication source and runtime checks and returned a valid scoped report. This checked the integration, not the quality of a full OpenELIS review.
+- **Two controlled Codex cases behaved as expected.** A seeded double-conversion defect was identified with matching source quotations. Approved deletion of an unused parser and its obsolete test returned no findings. Inputs and outputs are preserved in the evidence record; these cases are not an accuracy benchmark.
+- **Isolation and cleanup were exercised.** Real guest listeners bound to loopback and wildcard addresses were not forwarded to the host. No user filesystem was mounted; macOS supplied only its Rosetta platform share. Cancelling a real shell operation in a second VM removed that worker while preserving the OpenELIS worker. Scoped recovery was also exercised. All review VMs were removed after validation; the host Docker context remained `orbstack`.
 
-## Remaining before delivery
+See the [selected evidence, fixture source and model outputs](validation-evidence.json). Raw build, runtime and model logs remain in the local durable run directories identified by those run IDs.
 
-- Finish the live OpenELIS build, readiness, smoke assertions and cleanup; inspect retained evidence.
-- The implementation is pushed as draft PR #2; its first CI run passed. Record final live results and recheck CI after the probe correction.
+Live testing found and fixed three harness issues: Docker group activation, a negative-login probe that expected the wrong response shape, and loopback port forwarding. Cancellation testing also found and fixed output pipes held open by an escaped process. The earlier unsuccessful runs were retained as unsuccessful; OpenELIS application behavior was not changed.
 
-Broader model reliability, hostile-code penetration testing, Linux-host virtualization and complete OpenELIS/browser suites are not established by these checks. See the [runner guide](../review-runner.md) for supported scope and limits.
+## Manual boundary review and remaining scope
+
+The common runner owns source capture, evidence validation and outcomes. The OpenELIS adapter owns its test setup and probes; the existing OpenELIS launcher owns application startup. The model supplies semantic judgment, without repair or publication authority. Obsolete-test removal remains valid when it follows accepted requirements.
+
+This version uses a fixed authentication smoke, not complete OpenELIS/browser suites or dynamically selected probes. General repository configuration, human/managed-result import, Claude and other adapters, automated GitHub review, cross-repository collection, hard token/currency caps and the held-out quality evaluation remain later work. Linux-host virtualization and hostile-code penetration testing are unverified. See the [runner guide](../review-runner.md) for usage and limits.

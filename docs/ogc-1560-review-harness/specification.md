@@ -2,7 +2,7 @@
 
 **Specification roadmap · 22 October 2026**
 
-The bounded first version is being implemented; see the [runner guide](../review-runner.md) and [validation status](implementation-status.md). Requirements below beyond that documented scope remain future work.
+The bounded first version is implemented; see the [runner guide](../review-runner.md) and [validation status](implementation-status.md). Requirements below beyond that documented scope remain future work.
 [Jira](https://uwdigi.atlassian.net/browse/OGC-1560) · [agreed goals](goals.md) · [research and validation](research-and-validation.md)
 
 ## Decision
@@ -88,7 +88,7 @@ Current baseline: `30528d176bd128b4765242d130f38ca9fb85d7b8`, verified against u
 | `commit-pr-hygiene` | Separate deterministic checks, optional editorial guidance and publication policy. Allow repository-preauthorized automatic summaries while preserving explicit authorization for human-facing messages and merge actions. |
 | Installer and lint | Preserve skill installation and add runner/protocol tests. The existing CI validates skill frontmatter; it does not validate review correctness. |
 
-Proposed structure: `review/` for the common protocol, deterministic checks, optional semantic lenses and adapters; `tests/review/` for offline fixtures and protocol tests; `examples/repositories/` for pilot configurations. Agent skills become thin entry points into this procedure. Consolidate ownership/simplicity/spec-alignment rules into one source, with focused entry points referring to it. Retire the runtime-specific `Workflow` template as a required path; preserve any optional multi-reviewer recipe only behind the declared Deep plan. Keep evidence-media packaging separate and reusable. Installation remains explicit and preserves existing hooks. These paths are a proposal, not implemented assets.
+Proposed structure: `review/` for the common protocol, deterministic checks, optional semantic lenses and adapters; `tests/review/` for offline fixtures and protocol tests; `examples/repositories/` for pilot configurations. Agent skills become thin entry points into this procedure. Consolidate ownership/simplicity/spec-alignment rules into one source, with focused entry points referring to it. Retire the runtime-specific `Workflow` template as a required path; preserve any optional multi-reviewer recipe only behind the declared Deep plan. Keep evidence-media packaging separate and reusable. Installation remains explicit and preserves existing hooks. The first version uses `review/` and `tests/review/`; general repository configuration and the remaining adapter interfaces are later work. The runner guide records the implemented subset.
 
 Migration must include an inventory of installed skills and policy conflicts, a versioned code-qa release, updated repository pins/installers, and removal of superseded copied procedures. A transition alias may point to the new procedure but may not carry a second implementation. Roll back by pinning the prior release and restoring the prior configuration. Do not install both old and new semantics and leave agents to choose.
 

@@ -1,15 +1,12 @@
 # code-qa
 
-A small, project-agnostic suite of **agent skills that ensure shipped code is
-properly reviewed, improved, and proven** — the verification & evidence gap that
-off-the-shelf skills don't cover. Generation chores (code review summaries, commit
-messages, READMEs, changelogs) are already commodified; the durable, under-served
-value is *making sure what ships is correct and showing that it is*. These skills
-encode that discipline.
+A shared review procedure and local runner for mechanical checks, one Codex
+reviewer, and isolated OpenELIS execution. It records the reviewed revisions,
+findings, supporting evidence, usage and incomplete outcomes.
 
-> Why this focus? Across the 2026 surveys, AI-generated changes still fail after
-> passing QA, the majority need intervention, and most developers don't trust AI
-> code without manual review. The bottleneck is verification, not generation.
+The procedure starts with accepted requirements and component ownership. It
+supports legitimate removal of obsolete code and tests. Reviews remain advisory;
+recorded evidence does not guarantee that a change is correct.
 
 ## Skills
 
@@ -28,6 +25,9 @@ instructions) and, where useful, a `scripts/` helper.
 
 ## Layout
 ```
+review/                    # local runner, contracts and adapters
+tests/review/              # automated acceptance tests
+docs/review-runner.md       # supported usage and limits
 skills/<name>/
   SKILL.md                 # YAML frontmatter (name, description) + the procedure
   scripts/*.mjs            # optional deterministic helper(s)
@@ -50,7 +50,7 @@ node install.mjs --target /path/to/host-repo
 
 ## Requirements
 - `evidence-bundle`: `ffmpeg` (webm→mp4) and `zip` on PATH.
-- Local review runner: Node.js 20+. Optional model review: Codex CLI. OpenELIS execution: Lima 2+, virtualization and sufficient build resources.
+- Local review runner: Node.js 20+ and Git. Acceptance tests also need Python 3. Optional model review: Codex CLI. OpenELIS execution: Lima 2+, virtualization and sufficient build resources.
 
 ## License
 MIT — see [LICENSE](LICENSE).
