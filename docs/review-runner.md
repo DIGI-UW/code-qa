@@ -132,7 +132,11 @@ quotes. It does not independently prove that the model's semantic judgment is ri
 
 Claude and managed-review import/export, automatic GitHub reviews, PR/thread
 collection, stack collection, dynamic probes, browser scenarios, Verified/Deep
-rigor and held-out quality evaluation are not implemented. The broader
+rigor and held-out quality evaluation are not implemented. The next roadmap item
+is [parameterized L1–L5 levels](ogc-1560-review-harness/specification.md),
+with independent review type, explicit limits and a Sol-or-lower model ceiling.
+`--level` and model-ceiling enforcement are not available in v0.1; apply the
+ceiling manually when selecting `--model`. The broader
 [specification](ogc-1560-review-harness/specification.md) tracks those goals. The
 [current validation record](ogc-1560-review-harness/implementation-status.md) separates
 executed tests from those future capabilities.
