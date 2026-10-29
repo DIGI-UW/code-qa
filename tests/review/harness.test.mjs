@@ -35,7 +35,7 @@ async function fixture(t) {
 const planFor = (f, extra = {}) => createPlan({ repo: f.repo, base: f.base, head: 'HEAD', ...extra });
 const cleanReport = head => ({ schemaVersion: 1, head, summary: 'Scoped source review completed.', coverage: 'complete', omissions: [], findings: [] });
 const fakeReviewer = async (plan) => ({ report: cleanReport(plan.snapshot.head), usage: { input_tokens: 12, output_tokens: 9 } });
-const ai = { rigor: 'standard', adapter: 'codex', model: 'explicit-test-model', billingMode: 'unknown' };
+const ai = { rigor: 'standard', adapter: 'codex', model: 'gpt-6.1-sol', billingMode: 'unknown' };
 
 function fakeEnvironment(events, overrides = {}) {
   return () => ({
@@ -92,7 +92,7 @@ test('unsupported paid limits, combinations and unknown rigor are rejected', asy
   assert.throws(() => validatePlan({ ...plan, maxUsd: 1 }), /unsupported/);
   assert.throws(() => validatePlan({ ...plan, maxTokens: 100 }), /unsupported/);
   assert.throws(() => validatePlan({ ...plan, maxSessions: 2 }), /unsupported/);
-  assert.throws(() => validatePlan({ ...plan, rigor: 'deep' }), /not yet implemented/);
+  assert.throws(() => validatePlan({ ...plan, rigor: 'deep' }), /Unknown rigor/);
   assert.throws(() => validatePlan({ ...plan, rigor: 'mechanical' }), /Mechanical/);
 });
 
@@ -265,4 +265,36 @@ test('cancellation releases pipes held by an escaped descendant so cleanup can r
     const result = await Promise.race([running, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Cancellation never released inherited pipes')), 4000); })]);
     assert.equal(result.cancelled, true);
   } finally { clearTimeout(timer); }
+});
+
+test('cancellation kills a TERM-ignoring child after its parent closes all pipes', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'code-qa-term-child-'));
+  const pidFile = join(dir, 'ready.pid');
+  let pid;
+  t.after(async () => { if (pid) { try { process.kill(pid, 'SIGKILL'); } catch {} } await rm(dir, { recursive: true, force: true }); });
+  const descendant = `process.on('SIGTERM',()=>{});require('node:fs').writeFileSync(${JSON.stringify(pidFile)},String(process.pid));setInterval(()=>{},1000);`;
+  const parent = `require('node:child_process').spawn(process.execPath,['-e',${JSON.stringify(descendant)}],{stdio:'ignore'});setInterval(()=>{},1000);`;
+  const controller = new AbortController();
+  const running = command([process.execPath, '-e', parent], { signal: controller.signal, timeoutMs: 5000 });
+  for (let i = 0; i < 200 && !pid; i++) {
+    try { pid = Number(await readFile(pidFile, 'utf8')); } catch { await new Promise(resolve => setTimeout(resolve, 10)); }
+  }
+  assert.ok(pid, 'descendant installed its TERM handler');
+  controller.abort();
+  assert.equal((await running).cancelled, true);
+  // Give the OS time to reap the orphan; continued execution after the kill grace is the regression.
+  for (let i = 0; i < 150; i++) {
+    try { process.kill(pid, 0); } catch (error) { if (error.code === 'ESRCH') return; throw error; }
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  assert.fail('TERM-ignoring descendant survived cancellation');
+});
+
+test('source evidence accepts exact multiline spans and rejects wrong anchors or text', () => {
+  const packet = { snapshot: { head: 'abc' }, files: [{ path: 'a.js', side: 'head', text: 'one\n  two\nthree\n' }] };
+  const evidence = { kind: 'source', path: 'a.js', side: 'head', line: 2, quote: 'two\nthree', checkId: '' };
+  const report = { ...cleanReport('abc'), findings: [{ title: 'example', consequence: 'example', owner: 'example', severity: 'low', evidence: [evidence] }] };
+  assert.equal(validateReviewer(report, packet, []), report);
+  evidence.line = 1; assert.throws(() => validateReviewer(report, packet, []), /Source evidence/);
+  evidence.line = 2; evidence.quote = 'two\nfour'; assert.throws(() => validateReviewer(report, packet, []), /Source evidence/);
 });

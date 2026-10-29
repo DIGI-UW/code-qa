@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
 import { command, requireSuccess } from '../process.mjs';
+import { validateCheckResult } from '../checks.mjs';
 
 export const workerName = id => {
   if (!/^[0-9a-f-]{36}$/.test(id)) throw new Error('Invalid worker id');
@@ -41,6 +42,14 @@ export class OpenELISEnvironment {
         report.assertions.some(a => typeof a.name !== 'string' || typeof a.passed !== 'boolean')) throw new Error('Invalid OpenELIS assertion evidence');
     return { id: 'openelis-authentication-smoke', status: report.assertions.every(a => a.passed) ? 'pass' : 'fail',
       executed: report.assertions.length, assertions: report.assertions, head: report.head, endpoints: report.endpoints };
+  }
+  async runCheck(check, signal) {
+    const script = await readFile(new URL('./openelis-check.py', import.meta.url), 'utf8');
+    const payload = Buffer.from(JSON.stringify({ check, head: this.plan.snapshot.head })).toString('base64');
+    const result = await this.call('check-' + check.id,
+      ['limactl', 'shell', '--workdir', '/', this.name, 'sg', 'docker', '-c', 'python3 - ' + payload],
+      { input: script, signal, timeoutMs: (check.timeoutSeconds + 30) * 1000, maxBytes: 16 * 1024 * 1024 });
+    return validateCheckResult(JSON.parse(result.stdout.trim()), check, this.plan.snapshot.head);
   }
   async collect() {
     if (!this.owned) return;

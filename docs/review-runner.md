@@ -1,147 +1,221 @@
-# Local review runner, version 0.1
+# Review runner, version 0.2
 
-This first version supports mechanical checks, a single Codex reviewer, and an
-isolated OpenELIS environment. It produces local JSON and Markdown reports. It
-never repairs code, pushes, comments on a PR or merges.
+Run a mechanical or Codex review of an existing GitHub PR, or select local committed
+revisions. L4/L5 execute declared tests and scenarios in disposable OpenELIS before
+one reviewer examines the source and execution evidence. Reports stay local.
 
-## Requirements
+## Install and start
 
-- Node.js 20+ and Git.
-- AI review: an authenticated Codex CLI supporting the flags used by the adapter
-  (tested with 0.160.1). Select a model explicitly. Authentication stays on the
-  coordinator; it is not copied into OpenELIS.
-- OpenELIS: Lima 2+ (tested with 2.2.1), virtualization, internet access and space
-  for a 48 GiB sparse worker disk. The worker uses 4 CPUs and 12 GiB memory.
-  macOS uses VZ/Rosetta; Linux needs Lima's compatible virtualization prerequisites.
-  Linux execution has not yet been validated by this implementation.
+Requirements: Node.js 20+, Git, and authenticated `gh` for PR URLs. AI levels also
+need an authenticated Codex CLI (validated with 0.165.0). OpenELIS execution needs
+Python 3, Lima 2+ (validated with 2.2.1), virtualization, internet, and room for a
+48 GiB sparse worker disk. Each worker uses 4 CPUs and 12 GiB memory. macOS VZ is
+supported; Linux-host execution has not been validated. There are no npm dependencies.
 
-No npm dependencies are required. `npm test` runs offline harness acceptance tests
-(with Python 3 for the HTTP probe contract);
-`npm run lint` validates the installed skill definitions. Neither spends AI credits.
-
-## Plan, then execute
-
-From the code-qa checkout, select committed revisions in an existing repository.
-Uncommitted changes are intentionally excluded. Fetch the PR first using existing
-Git/GitHub tooling; this release does not infer a PR or stack from the current branch.
+From this code-qa checkout:
 
 ```sh
-node review/cli.mjs plan \
-  --repo /path/to/OpenELIS-Global-2 --base origin/develop --head PR_BRANCH \
-  --environment openelis --out /path/to/review-plan.json
-node review/cli.mjs run \
-  --plan /path/to/review-plan.json --out /path/to/durable-review-runs
+npm install --global .
+code-qa levels
+code-qa review --pr https://github.com/DIGI-UW/OpenELIS-Global-2/pull/4798 --level L1
 ```
 
-The plan shows exact base, merge-base and head commits, changed-file inventory,
-scope, environment and limits. Run directories have unique IDs and cannot be
-overwritten. Keep evidence outside system temporary directories and outside the
-repository being reviewed. Git refs are checked before and after execution; using
-full commit IDs deliberately reviews that historical snapshot. This local runner
-does not claim the snapshot is still the current GitHub PR head.
+Installation is optional: replace `code-qa` with `node review/cli.mjs` from the checkout.
+The default output directory is `$HOME/code-qa-runs`; `--out` selects another durable
+directory. A PR command fetches exact base/head commits into a bare cache without
+checking out, resetting, or changing an application worktree. `--repo PATH` can
+reuse an existing repository. PR identity is checked before and after execution;
+a changed base/head or closed PR makes the result superseded.
 
-Mechanical runs check whitespace in the selected diff and, if OpenELIS is selected,
-boot it and run the authentication smoke checks. Mechanical never calls a model.
-Source-only checks use `--environment none`, the default.
-
-For a model review, add explicit settings to the plan:
+A focused, inexpensive review:
 
 ```sh
-node review/cli.mjs plan \
-  --repo /path/to/repository --base BASE --head HEAD \
-  --application targeted --question 'Does this change preserve the agreed boundary?' \
+code-qa review --pr https://github.com/OWNER/REPO/pull/NUMBER \
+  --level L2 --application targeted --lens ownership \
+  --question 'Does this change preserve the agreed producer/consumer boundary?' \
   --path src/consumer.js --context src/producer.js \
   --requirements /path/to/accepted-requirements.txt \
-  --rigor standard --adapter codex --model MODEL \
-  --billing-mode subscription --review-seconds 300 \
-  --out /path/to/targeted-plan.json
+  --billing-mode subscription
 ```
 
-`--path` and `--context` may repeat. Paths are repository-relative. Context currently
-accepts individual files; select relevant unchanged callers/consumers explicitly.
-`--requirements` is a caller-selected trusted text file, not executable PR policy.
-If it is absent, no new requirement is inferred from the existing tests. Source
-files, including PR instructions, are review data.
+`--path` selects changed files or directory prefixes. `--context` adds individual
+unchanged files. Both may repeat. Choose paths that actually exist in the target
+PR. The application (`pr` or `targeted`), question and optional lens are independent
+of the level. Supplying a question defaults to targeted application.
 
-The model receives the captured base/head source and check results. It cannot
-interactively explore or run probes in this first version. Codex runs with shell,
-web, apps, plugins, hooks, memory, skill discovery and delegation disabled, in a
-separate read-only working directory. Ambient user configuration and project
-instructions are suppressed. Nonfatal CLI diagnostics are recorded; failed turns,
-missing output and unexpected tool events invalidate the result. Managed host
-policy remains administrator-controlled; use a dedicated coordinator for untrusted
-public-fork review. This release is not a penetration-tested hostile-code service.
+## Levels and cost controls
 
-One session and its wall-clock limit are enforced. Codex may make internal requests
-within that session; this is not a token or currency cap. API/subscription/unknown
-billing is recorded, and reported tokens are retained without converting subscription
-usage into dollars. Hard monetary/token limits and automatic escalation are
-unsupported. Context omissions produce a partial model review, never clean clearance.
+| Level | Executed work | Reviewer seconds | Source bytes | Reasoning |
+| --- | --- | ---: | ---: | --- |
+| L1 Mechanical | Snapshot, diff whitespace, optional declared execution; no AI | 0 | 32,000 | n/a |
+| L2 Lightweight | Focused source review | 120 | 32,000 | low |
+| L3 Standard | Broader source review with neighboring context | 300 | 200,000 | medium |
+| L4 Verified | Source review plus at least one declared executable check | 600 | 300,000 | high |
+| L5 Deep | L4 plus at least one declared interaction/scenario check | 900 | 500,000 | high |
 
-## OpenELIS lifecycle
+Every AI level permits **one session**, with no automatic retry, additional reviewer
+or model upgrade. Defaults use `gpt-6.1-sol`; the explicit allowlist also permits
+`gpt-6-sol` and `gpt-6-luna`. Astra and unknown model IDs are rejected. Model IDs are
+policy, not a guarantee that an account has access. An unavailable model fails the
+run without fallback.
 
-The worker has no host workspace/home mounts, forwarded SSH agent, host Docker
-socket or forwarded application ports. macOS VZ supplies its Rosetta platform share
-for architecture translation; that is the only shared filesystem observed in the
-live test. The worker has its own Docker engine. It fetches the exact
-public OpenELIS commit and uses its supported `scripts/dev-stack up --build
---no-scenarios` launcher. The selected revision must contain that interface and its
-pinned dependencies must be accessible. No application checkout on the host changes.
+Override `--review-seconds`, `--max-context-bytes`, and `--reasoning-effort` explicitly.
+The preview, plan and report record effective settings and preset version. Limits
+bound source bytes and reviewer wall time, **not** total prompt tokens or currency.
+Requirements, metadata and test evidence add to the prompt. Reported token usage
+is retained; subscription credits are not converted into dollars. Hard token/currency
+caps and extra sessions are unsupported. Legacy `--rigor mechanical|standard`
+aliases resolve to L1/L3 and conflicting level selections fail.
 
-The launcher builds the WAR, frontend and analyzer dependency images from source.
-It uses an empty disposable database with the repository's test configuration and
-self-signed test TLS. Startup waits for actual login readiness. The smoke check
-asserts valid test-admin login, rejection of an incorrect password, and the login
-page's application root. This is HTTP/authentication evidence, not a browser workflow
-or the complete OpenELIS test suite. Existing repository CI remains authoritative
-for its own checks.
+L1 is the default. L4/L5 require `--environment openelis` and declared checks;
+login smoke alone cannot satisfy them. Source-only reviews never claim runtime
+verification. Completion means completion of the selected scope, not whole-PR
+clearance. Missing required source stops AI execution as partial before credits
+or VM startup; narrow the question/scope or explicitly raise the allowance.
 
-Logs record build/startup, check assertions, source/submodule commits and image
-inventory. The complete VM is removed after success, failure, timeout or cancellation,
-so its containers, volumes and orphaned processes cannot affect another run. No
-broad Docker prune is used. A forced coordinator kill can leave a VM behind; recover
-only that run with:
+## Preview or review local revisions
 
 ```sh
-node review/cli.mjs cleanup --run /path/to/durable-review-runs/RUN_ID
+code-qa plan --pr https://github.com/OWNER/REPO/pull/NUMBER \
+  --level L2 --path src/consumer.js --out /path/to/plan.json
+code-qa run --plan /path/to/plan.json --out /path/to/review-runs
+
+code-qa review --repo /path/to/repository --base origin/develop --head FEATURE \
+  --level L1 --out /path/to/review-runs
 ```
 
-VM startup/build time is bounded separately by `--startup-seconds` (default 3600).
-The smoke check, evidence collection and cleanup each have their own bounded timeout.
-A unique worker name prevents accidental reuse; an existing worker is never adopted
-by a normal run. Review artifacts can contain source and logs, so store them privately
-and publish only deliberately selected evidence.
+Plans and run directories are created once and never overwritten. Uncommitted
+changes are excluded. Local named refs are checked for movement; explicit SHAs
+intentionally select historical evidence and do not claim current GitHub freshness.
+Version 0.1 plans must be recreated; their owned workers can still be cleaned up.
 
-## Outcomes and evidence
+## Context and trusted repository configuration
 
-`result.json`, `report.md`, `plan.json` and `packet.json` are retained with logs.
-Execution and assessment are separate:
+The collector adds direct Java/relative JavaScript/TypeScript imports, matching
+tests and one-hop filename references. This is a heuristic, not a complete call
+graph. Above 60 changed files it records that discovery was skipped. Use explicit
+context or narrow to a coherent scope. `--no-auto-context` disables the heuristic;
+it does not discard explicit context or trusted context rules.
 
-- Exit 0 means requested execution completed, including runs with findings.
-- Exit 2 means partial/error; exit 3 means cancelled or superseded.
-- `no_findings` is possible only for complete requested coverage. A targeted run
-  never claims a whole-PR review or mergeability.
-- Missing/malformed output, stale model commits, invented source quotations,
-  zero tests, startup failure and exhausted time never become clean results.
+`.code-qa.json` is read from the PR **base**, never the proposed head. An explicit
+`--config FILE` replaces it. Only these operator/base settings may select commands;
+PR descriptions and changed files are untrusted review data. Example:
 
-The shared procedure lives in `skills/review-change/SKILL.md`; focused skills and
-the runner use that single source. Evidence validation checks provenance and exact
-quotes. It does not independently prove that the model's semantic judgment is right.
+```json
+{
+  "requirementsFiles": ["specs/analyzers/spec.md"],
+  "contextRules": [
+    {
+      "paths": ["src/main/java/org/openelisglobal/analyzerimport"],
+      "context": ["src/test/java/org/openelisglobal/analyzerimport/service/AnalyzerNormalizedResultContractTest.java"]
+    }
+  ]
+}
+```
 
-## Later releases
+Requirements files also come from the base. Explicit `--requirements FILE` appends
+operator-supplied accepted requirements. Existing tests alone do not establish
+required behavior; obsolete tests may legitimately be removed during refactoring.
+Configuration may additionally supply `environment` and a `checks` array. Never
+use configuration from an unreviewed PR as a trusted operator override.
 
-Claude and managed-review import/export, automatic GitHub reviews, PR/thread
-collection, stack collection, dynamic probes, browser scenarios, Verified/Deep
-rigor and held-out quality evaluation are not implemented. The next roadmap item
-is [parameterized L1–L5 levels](ogc-1560-review-harness/specification.md),
-with independent review type, explicit limits and a Sol-or-lower model ceiling.
-`--level` and model-ceiling enforcement are not available in v0.1; apply the
-ceiling manually when selecting `--model`. The broader
-[specification](ogc-1560-review-harness/specification.md) tracks those goals. The
-[current validation record](ogc-1560-review-harness/implementation-status.md) separates
-executed tests from those future capabilities.
+## Executable checks and scenarios
 
-Adapter references: [Codex noninteractive execution](https://learn.chatgpt.com/docs/non-interactive-mode),
-[configuration controls](https://learn.chatgpt.com/docs/config-file/config-reference),
-and [Lima configuration](https://lima-vm.io/docs/config/). Installed capabilities are
-checked through actual runs rather than inferred from documentation alone.
+```sh
+code-qa review --pr https://github.com/DIGI-UW/OpenELIS-Global-2/pull/NUMBER \
+  --level L5 --environment openelis --checks examples/openelis-checks.json \
+  --path src/main/java/org/openelisglobal/analyzerimport/service/AnalyzerNormalizedResultContract.java \
+  --context src/test/java/org/openelisglobal/analyzerimport/service/AnalyzerNormalizedResultContractTest.java \
+  --question 'Does the result contract preserve canonical numeric values?' \
+  --billing-mode subscription
+```
+
+The example checks file runs a selected existing contract test and a synthetic FHIR
+create/read/update/delete scenario. Adapt selections to the actual PR; it is not a
+complete analyzer or AMR acceptance suite. A check has this shape:
+
+```json
+{
+  "id": "result-contract",
+  "kind": "test",
+  "argv": ["mvn", "-q", "-Dtest=AnalyzerNormalizedResultContractTest", "test"],
+  "reports": ["target/surefire-reports/TEST-*.xml"],
+  "timeoutSeconds": 900
+}
+```
+
+`--checks FILE` contains an array of checks and overrides base-config checks.
+`kind` is `test` or `scenario`; scenario means an explicitly selected interaction
+check. `argv` runs directly, without implicit shell expansion. Optional `cwd` and
+report patterns are relative to the isolated source root. Checks receive the
+launcher’s exported environment, including test endpoint URLs. At most 20 checks
+may run; each has a 1–3600 second limit. Select fresh JUnit XML reports from that
+command; stale matching reports are removed before execution. At least one
+non-skipped testcase is required. Malformed, missing, zero-test, timeout and
+command-failure output cannot become behavioral proof. Test failures retain their
+assertions as findings. These are declared checks run before review, not probes
+dynamically requested by the model.
+
+## Isolation and lifecycle
+
+The OpenELIS worker has its own Docker engine and synthetic database, no host
+workspace/home mount, forwarded SSH agent, host Docker socket or application port
+forwarding. macOS supplies only its Rosetta translation share. The worker fetches
+the exact public `DIGI-UW/OpenELIS-Global-2` commit and its recorded dependencies;
+local OpenELIS plans must use a commit available there. It invokes the repository’s
+`scripts/dev-stack up --build --no-scenarios`. The chosen revision must support
+that interface. Application startup remains owned by OpenELIS, not duplicated in
+code-qa. Other repositories can use source-only review; other environments are
+not implemented.
+
+Startup builds from source and waits for login readiness. Authentication smoke
+checks valid test-admin login, rejection of an incorrect password, and the frontend
+application root. Declared checks then run, evidence is collected and the whole
+VM is removed before the reviewer starts. Startup defaults to 3600 seconds,
+overridden with `--startup-seconds`; each test, evidence collection and cleanup
+has its own timeout. Failure/cancellation also triggers scoped cleanup. A forced
+coordinator kill may leave a worker; recover only that run with:
+
+```sh
+code-qa cleanup --run /path/to/review-runs/RUN_ID
+```
+
+Codex receives source and check evidence in a separate read-only directory, with
+tools, host configuration, hooks, skills, memory and delegation disabled. It cannot
+repair, publish or merge. Managed host policy remains administrator-controlled;
+use a dedicated coordinator for hostile public-fork review. This is not a
+penetration-tested multi-tenant service. Authentication remains on the coordinator
+and is not copied into OpenELIS. Artifacts may contain source and logs; retain them
+privately and publish only deliberately selected evidence.
+
+## Reports and exit codes
+
+Each run retains `plan.json`, `packet.json`, `result.json`, `report.md` and logs.
+The report shows scope, level, model/limits, executed assertions, evidence-linked
+findings, omissions and cleanup. Source quotes are checked against exact recorded
+lines. GitHub check status is a collection-time snapshot, not a replacement for
+live CI.
+
+- Exit 0: requested execution completed, including completed runs **with findings**.
+- Exit 2: partial or error. Exit 3: cancelled or superseded.
+- `no_findings` is allowed only for complete requested coverage.
+- Invalid model output, fabricated quotations, missing tests and unavailable
+  services remain unverified. Structural evidence validation does not prove the
+  model's judgment correct.
+
+Automation should inspect both `status` and `assessment` in `result.json`; exit 0
+alone is not an approval. Reports never establish full CI health or mergeability.
+
+## Validation and remaining integrations
+
+Run `npm test` and `npm run lint` without AI credentials. The
+[implementation record](ogc-1560-review-harness/implementation-status.md) distinguishes
+automated harness tests, real source reviews and isolated OpenELIS execution.
+Claude/other adapters, managed-review import/export, automatic GitHub publication,
+review-thread and stack/dependency collection, dynamic probes and the held-out
+quality evaluation remain later milestones. Local PR collection, freshness and
+L1–L5 execution are implemented in this version.
+
+Adapter references: [Codex developer commands](https://learn.chatgpt.com/docs/developer-commands),
+[configuration](https://learn.chatgpt.com/docs/config-file/config-reference),
+and [Lima configuration](https://lima-vm.io/docs/config/).

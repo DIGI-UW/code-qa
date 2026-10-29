@@ -50,6 +50,7 @@ export async function packetFor(plan) {
   }
   return { schemaVersion: 1, snapshot: snap, application: plan.application, question: plan.question,
     purpose: plan.purpose, requirements: plan.requirements, selectedPaths: changed,
+    contextNotes: plan.contextNotes ?? [], pullRequest: plan.pullRequest ? { url: plan.pullRequest.url, title: plan.pullRequest.title, body: plan.pullRequest.body, checks: plan.pullRequest.checks, checksWarning: plan.pullRequest.checksWarning } : null,
     contextPaths: plan.contextPaths, files, omissions };
 }
 

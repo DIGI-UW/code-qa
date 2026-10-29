@@ -9,3 +9,5 @@ evidence-bundle-*/
 
 # Local review evidence and disposable run state
 .review-runs/
+
+__pycache__/

@@ -1,4 +1,39 @@
-# First version implementation and validation
+# Implementation and validation
+
+## Version 0.2 — 29 October 2026
+
+The current implementation adds parameterized L1–L5, independent application/lens,
+trusted base-revision configuration, PR URL collection with freshness checks,
+neighboring source discovery, enforced Sol/Luna models and declared isolated
+OpenELIS tests/scenarios. The CLI can be installed as `code-qa`; the
+[runner guide](../review-runner.md) gives working commands and limits.
+
+Current local validation:
+
+- 36 automated tests passed, including actual subprocess cancellation, timeout,
+  stale/zero JUnit rejection, model policy, L4/L5 execution and cleanup.
+- All seven skill definitions passed validation.
+- A packed installation exposed the CLI and all level presets.
+- A live GitHub PR-URL L1 review completed without AI.
+- The first L2 review exposed a real process-group cleanup defect. A new regression
+  reproduced it before the fix and passed afterward. Exact multiline source quotes
+  are now supported; wrong anchors and changed text remain rejected. The original
+  rejected model report is retained as unsuccessful evidence.
+- The first L5 run built isolated OpenELIS at historical commit
+  `556f35d6708f28ec32659a9f25a5ab5e80c268a4`, passed three authentication assertions
+  and 24 contract tests, then removed its VM. The example FHIR scenario lacked a
+  client certificate and failed; that is not workflow acceptance. Its fixture now
+  uses only the worker's generated test certificate, and the corrected live run
+  is pending.
+
+These are harness integration tests, not current analyzer/AMR stack clearance or
+an accuracy benchmark. No application repository was changed. Local L4/L5 use
+predeclared checks before one model review; dynamic model-requested probes,
+additional adapters, managed-review import/export, automatic publication,
+thread/stack/dependency collection and held-out quality evaluation remain later work.
+
+## Version 0.1 — previous validation
+
 
 22 October 2026. Implemented and pushed as [code-qa PR #2](https://github.com/DIGI-UW/code-qa/pull/2), following the [specification PR #1](https://github.com/DIGI-UW/code-qa/pull/1). Nothing merged. This is a local first version, not the broader model-quality pilot.
 

@@ -55,12 +55,23 @@ node install.mjs --target /path/to/host-repo
 ## License
 MIT — see [LICENSE](LICENSE).
 
-## Local review harness (v0.1)
+## Local review harness (v0.2)
 
-The [runner guide](docs/review-runner.md) covers mechanical checks, one Codex reviewer,
-and a disposable OpenELIS VM. Start with `node review/cli.mjs --help`; run the harness
-acceptance tests with `npm test`. Model-assisted review is an explicit choice.
+Run a review of an existing PR:
 
-The [OGC-1560 specification](docs/ogc-1560-review-harness/specification.md) describes
-the broader roadmap. The first version does not implement automatic PR publication,
-Claude integration, Verified/Deep review or a model-quality pilot.
+```sh
+node review/cli.mjs review --pr https://github.com/OWNER/REPO/pull/NUMBER --level L1
+```
+
+Choose L1 for no AI, L2 for one lightweight Sol session, L3 for broader source
+review, L4 for declared executable checks, or L5 for selected scenarios. L4/L5
+run in disposable OpenELIS and require a checks configuration. Levels, application,
+question and lens are independent; no automatic model escalation occurs.
+
+The [runner guide](docs/review-runner.md) includes installation, focused reviews,
+limits, repository configuration and executable examples. Run `npm test` for
+no-credit acceptance tests. The [implementation record](docs/ogc-1560-review-harness/implementation-status.md)
+separates tested capabilities from remaining integrations and quality evaluation.
+The [specification](docs/ogc-1560-review-harness/specification.md) tracks the broader
+roadmap. Automatic publication, Claude integration and the model-quality pilot
+are later work.

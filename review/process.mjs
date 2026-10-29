@@ -45,6 +45,9 @@ export async function command(argv, { cwd, env = process.env, input, timeoutMs =
     child.stdin.on('error', () => {}); // A process may exit before consuming its input.
     child.stdin.end(input);
     child.on('close', async (code) => {
+      // A direct child can exit while a TERM-ignoring descendant closes its pipes.
+      // Finish terminating the owned group before cancelling escalation.
+      if (killTimer) kill('SIGKILL');
       clearTimeout(timer); clearTimeout(killTimer);
       signal?.removeEventListener('abort', abort);
       await Promise.allSettled(chunks);

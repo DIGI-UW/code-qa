@@ -35,13 +35,14 @@ The application selects the question and scope. Rigor selects how much verificat
 
 Targeted lenses include correctness, architecture/ownership, simplicity, test quality, security/access control, compatibility/configuration, and documentation. These are sections/checks within a review, not automatically separate agents. A targeted review can expand to a necessary caller/consumer, explaining why; unrelated defects go to a separate follow-up rather than silently enlarging the assignment.
 
-### Parameterized L1–L5 levels — next roadmap item
+### Parameterized L1–L5 levels — implemented in v0.2
 
 Requested on 22 October 2026. Adopt **L1–L5** as the public level names and
 expose a `--level` parameter. Level selects effort; `--application` selects the
 review type, and an optional `--lens` selects a concern such as ownership or
-security. These choices stay independent. The definitions below are the roadmap;
-the current v0.1 CLI still accepts only `--rigor mechanical|standard`.
+security. These choices stay independent. Version 0.2 implements all five levels with one
+Codex reviewer and declared OpenELIS checks/scenarios. The runner guide describes
+the supported interface; dynamic probes and additional adapters remain later work.
 
 | Level | Purpose and selected work | AI usage |
 | --- | --- | --- |
@@ -65,8 +66,7 @@ allowlist of permitted Sol/Luna model IDs and reject Astra or unknown models
 before invocation. A different provider needs its own approved model allowlist;
 do not infer cross-provider equivalence from a model name. A higher model needs
 an explicit user request and a deliberate trusted-policy change, never a fallback
-or a PR-supplied override. v0.1 still accepts any explicit model string, so this
-policy is applied manually until the parameterization milestone enforces it.
+or a PR-supplied override. Version 0.2 enforces this policy before invocation.
 
 **Parameters and defaults.** Keep one versioned preset definition for the CLI,
 automated jobs and skill entry points. Each level resolves into application/lens,
@@ -78,8 +78,8 @@ trusted overrides may change supported limits, but cannot turn L1 into an AI run
 or bypass the model ceiling. Unknown levels and unsupported capabilities fail
 before paid execution; never silently substitute another level.
 
-Proposed L2 starting preset for validation: one Codex Sol session, low reasoning
-where supported, 120 seconds and 32,000 source-context bytes. This is a proposed
+Implemented L2 preset version 1: one Codex Sol session, low reasoning
+where supported, 120 seconds and 32,000 source-context bytes. This is a
 smaller default, not an input-token or currency cap. Prepare one complete call
 path before spending credits; if necessary context will not fit, report that
 limitation instead of launching extra rounds. Higher presets must declare their
@@ -107,15 +107,15 @@ isolated application without spending AI credits.
 
 Budgets include time, tool requests, model calls/rounds and tokens where measurable. Record billing mode (API, subscription credits, local inference or external managed review). Quote currency only when pricing/usage supports it; subscription credits cannot be inferred from token counts. Each adapter declares what limits it can enforce. If it cannot enforce a requested hard monetary/token limit, reject that plan or require the caller to explicitly select supported limits—never pretend a shell timeout enforces dollars. Stop before further work at an enforced limit and preserve a partial report. No silent fallback, paid escalation or extra reviewers.
 
-Illustrative interface, not installed commands:
+Supported local interface (install from the checkout with `npm install --global .`):
 
 ```sh
-code-qa plan --pr <url> --application pr --level L1
+code-qa plan --pr <url> --application pr --level L1 --out plan.json
 code-qa review --pr <url> --application targeted \
   --question "Does this refactor preserve the agreed ownership boundary?" \
   --level L2 --lens ownership --adapter codex --model <allowed-sol-model> \
   --review-seconds 120
-code-qa review --plan <approved-plan.json> --adapter claude
+code-qa run --plan <approved-plan.json>
 code-qa import --adapter <managed-review-provider> --report <export.json>
 ```
 
@@ -148,7 +148,7 @@ Current baseline: `30528d176bd128b4765242d130f38ca9fb85d7b8`, verified against u
 | `commit-pr-hygiene` | Separate deterministic checks, optional editorial guidance and publication policy. Allow repository-preauthorized automatic summaries while preserving explicit authorization for human-facing messages and merge actions. |
 | Installer and lint | Preserve skill installation and add runner/protocol tests. The existing CI validates skill frontmatter; it does not validate review correctness. |
 
-Proposed structure: `review/` for the common protocol, deterministic checks, optional semantic lenses and adapters; `tests/review/` for offline fixtures and protocol tests; `examples/repositories/` for pilot configurations. Agent skills become thin entry points into this procedure. Consolidate ownership/simplicity/spec-alignment rules into one source, with focused entry points referring to it. Retire the runtime-specific `Workflow` template as a required path; preserve any optional multi-reviewer recipe only behind the declared L5 plan. Keep evidence-media packaging separate and reusable. Installation remains explicit and preserves existing hooks. The first version uses `review/` and `tests/review/`; general repository configuration and the remaining adapter interfaces are later work. The runner guide records the implemented subset.
+Proposed structure: `review/` for the common protocol, deterministic checks, optional semantic lenses and adapters; `tests/review/` for offline fixtures and protocol tests; `examples/repositories/` for pilot configurations. Agent skills become thin entry points into this procedure. Consolidate ownership/simplicity/spec-alignment rules into one source, with focused entry points referring to it. Retire the runtime-specific `Workflow` template as a required path; preserve any optional multi-reviewer recipe only behind the declared L5 plan. Keep evidence-media packaging separate and reusable. Installation remains explicit and preserves existing hooks. Version 0.2 uses `review/` and `tests/review/`, with trusted base-revision repository configuration; remaining adapter interfaces are later work. The runner guide records the implemented subset.
 
 Migration must include an inventory of installed skills and policy conflicts, a versioned code-qa release, updated repository pins/installers, and removal of superseded copied procedures. A transition alias may point to the new procedure but may not carry a second implementation. Roll back by pinning the prior release and restoring the prior configuration. Do not install both old and new semantics and leave agents to choose.
 
@@ -279,8 +279,8 @@ Then run report-only on 20 real PRs across the pilots. Improve rules using devel
 | M1: revamp and mechanical path | Consolidate existing skills; define scope/rigor/budget, packet/report contracts and trusted configuration. Deliver a local CLI with snapshots, human/file input, deterministic checks and outcome validation. Test it without model credentials, including malformed output, stale code and zero-test cases. |
 | M2: isolated environment lifecycle | Implement prepare/start/readiness/verify/evidence/cleanup around one repository launcher. Demonstrate the actual PR source running with synthetic data, scoped resources and teardown. Test failed startup, timeouts, cancellation and concurrent runs. No real-PR pilot yet. |
 | M3: first usable AI review | Add one working Codex or Claude adapter with general and targeted reviews, supported budgets and validated output. Test fake-adapter failure cases and an actual bounded model invocation against controlled fixtures. The first version is a locally runnable harness with tested environment startup and one AI integration. |
-| M3a: parameterized review levels (next) | Add versioned L1–L5 presets, independent application/lens selection, explicit supported overrides, effective-plan reporting and enforced Sol-or-lower model policy. Deliver L1–L3 selection first; keep L4/L5 execution unavailable until the declared verification capabilities are implemented. Validate no-credit L1, single-session L2, limits, unsupported levels/capabilities and model restrictions before spending credits on a bounded L2 fixture. |
-| M4: portability and automation | Implement the declared L4/L5 verification capabilities and capped execution; add the second runtime, remaining repository configurations, trusted GitHub workflow, managed-review import/export, freshness/deduplication and stack/dependency context. Test adapter conformance, fork isolation and publication before enabling real-PR review. |
+| M3a: parameterized review levels (v0.2) | Implemented L1–L5 presets, independent application/lens, supported overrides, effective-plan reporting and Sol/Luna allowlist. Local PR-URL collection and freshness are available. L4 executes declared tests; L5 additionally requires a declared scenario in isolated OpenELIS. See implementation-status.md for actual validation evidence. |
+| M4: portability and automation (remaining) | Add the second model adapter/environment, trusted GitHub workflow, managed-review import/export, deduplication and stack/dependency/thread collection. Local PR freshness and declared L4/L5 execution are delivered in v0.2; dynamic model-requested probes are not. Test adapter conformance, fork isolation and publication before enabling automated publication. |
 | M5: evaluation and advisory pilot | Run the held-out fixture evaluation using the working harness, then the report-only real-PR pilot. Publish costs, misses and false alarms; document migration, retention, maintenance and rollback. |
 | Later, separately justified | Optional local failure hooks, additional model adapters, narrow deterministic gates and optional repair handoff. No autonomous repair loop is required for M1–M5. |
 
