@@ -116,7 +116,6 @@ code-qa review --pr <url> --application targeted \
   --level L2 --lens ownership --adapter codex --model <allowed-sol-model> \
   --review-seconds 120
 code-qa run --plan <approved-plan.json>
-code-qa import --adapter <managed-review-provider> --report <export.json>
 ```
 
 Plan, execution and imported reports use the same run contract. Import never invents evidence that the external provider did not supply.

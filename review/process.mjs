@@ -13,6 +13,11 @@ export async function command(argv, { cwd, env = process.env, input, timeoutMs =
     file = await open(log, 'wx', 0o600);
     await file.write(`${JSON.stringify({ argv, cwd, started: new Date(started).toISOString() })}\n`);
   }
+  // An abort may arrive while asynchronous log preparation is in progress.
+  if (signal?.aborted) {
+    await file?.close();
+    return { code: null, cancelled: true, stdout: '', stderr: '', elapsedMs: Date.now() - started };
+  }
   return new Promise((resolve) => {
     const child = spawn(argv[0], argv.slice(1), { cwd, env, detached: process.platform !== 'win32', stdio: 'pipe' });
     let stdout = '', stderr = '', bytes = 0, timedOut = false, cancelled = false, overflow = false, spawnError, writeError;

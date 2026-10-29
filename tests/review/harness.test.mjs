@@ -298,3 +298,16 @@ test('source evidence accepts exact multiline spans and rejects wrong anchors or
   evidence.line = 1; assert.throws(() => validateReviewer(report, packet, []), /Source evidence/);
   evidence.line = 2; evidence.quote = 'two\nfour'; assert.throws(() => validateReviewer(report, packet, []), /Source evidence/);
 });
+
+test('cancellation during log setup does not launch the command', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'code-qa-log-cancel-'));
+  t.after(() => rm(dir, {recursive:true,force:true}));
+  const marker = join(dir,'must-not-exist');
+  const controller = new AbortController();
+  const running = command([process.execPath,'-e',`require('node:fs').writeFileSync(${JSON.stringify(marker)},'launched')`],
+    {log:join(dir,'run.log'),signal:controller.signal});
+  controller.abort(); // The call is suspended in asynchronous log preparation.
+  const result = await running;
+  assert.equal(result.cancelled,true);
+  await assert.rejects(readFile(marker),{code:'ENOENT'});
+});

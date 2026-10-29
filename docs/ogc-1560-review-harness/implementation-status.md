@@ -10,7 +10,7 @@ OpenELIS tests/scenarios. The CLI can be installed as `code-qa`; the
 
 Current local validation:
 
-- 36 automated tests passed, including actual subprocess cancellation, timeout,
+- 37 automated tests passed, including actual subprocess cancellation, timeout,
   stale/zero JUnit rejection, model policy, L4/L5 execution and cleanup.
 - All seven skill definitions passed validation.
 - A packed installation exposed the CLI and all level presets.
@@ -18,13 +18,18 @@ Current local validation:
 - The first L2 review exposed a real process-group cleanup defect. A new regression
   reproduced it before the fix and passed afterward. Exact multiline source quotes
   are now supported; wrong anchors and changed text remain rejected. The original
-  rejected model report is retained as unsuccessful evidence.
+  rejected model report is retained as unsuccessful evidence. A second L2 run
+  completed with valid source-linked output and exposed an abort-during-log-setup
+  race; it too was reproduced before fixing and now has a passing regression.
+  Neither finding was automatically repaired by the reviewer.
 - The first L5 run built isolated OpenELIS at historical commit
   `556f35d6708f28ec32659a9f25a5ab5e80c268a4`, passed three authentication assertions
   and 24 contract tests, then removed its VM. The example FHIR scenario lacked a
   client certificate and failed; that is not workflow acceptance. Its fixture now
   uses only the worker's generated test certificate, and the corrected live run
   is pending.
+
+See [selected v0.2 execution evidence](validation-v02.json).
 
 These are harness integration tests, not current analyzer/AMR stack clearance or
 an accuracy benchmark. No application repository was changed. Local L4/L5 use
