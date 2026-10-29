@@ -13,7 +13,7 @@ Current local validation:
 - 37 automated tests passed, including actual subprocess cancellation, timeout,
   stale/zero JUnit rejection, model policy, L4/L5 execution and cleanup.
 - All seven skill definitions passed validation.
-- A packed installation exposed the CLI and all level presets.
+- A packed installation exposed the CLI and all level presets, and executed an L1 review.
 - A live GitHub PR-URL L1 review completed without AI.
 - The first L2 review exposed a real process-group cleanup defect. A new regression
   reproduced it before the fix and passed afterward. Exact multiline source quotes
@@ -26,9 +26,15 @@ Current local validation:
   `556f35d6708f28ec32659a9f25a5ab5e80c268a4`, passed three authentication assertions
   and 24 contract tests, then removed its VM. The example FHIR scenario lacked a
   client certificate and failed; that is not workflow acceptance. Its fixture now
-  uses only the worker's generated test certificate, and the corrected live run
-  is pending.
+  uses only the worker's generated test certificate. The corrected fresh L5 run
+  passed all three authentication assertions, 24 contract tests and the FHIR
+  create/read/update/delete scenario. One Sol reviewer consumed the source and
+  execution evidence and returned a valid, complete report with no findings for
+  the selected question. The worker was removed.
 
+Runtime changes are in `933452554216b791a30efc1691677c4871af7b31` and the
+cancellation follow-up `5ccc2c3b4cce0cb798ce7d364754d7e4654d2556`. GitHub checks
+were queued at this documentation update; local validation is not a CI-green claim.
 See [selected v0.2 execution evidence](validation-v02.json).
 
 These are harness integration tests, not current analyzer/AMR stack clearance or
