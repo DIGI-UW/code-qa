@@ -1,0 +1,743 @@
+{
+  "title": "code-qa: requirements-to-implementation audit",
+  "auditedAt": "2026-10-30",
+  "repository": "DIGI-UW/code-qa",
+  "revision": "853a24d557cc451bce89ca8743fcf52a807de6fb",
+  "version": "0.3.0",
+  "conclusion": "The existing runner is a useful foundation, but it does not implement the rigorous L1\u2013L5 review harness requested. The gap is in enforced review methods, test adequacy and full-stack acceptance, not merely naming or model effort.",
+  "scope": "Read-only code and specification audit at the recorded local HEAD, two independent source reviews, pinned reference comparison and current official research. This is not a fresh CI assessment, application review or deployment.",
+  "modelPolicy": "The user's Sol preference was for inexpensive immature-harness test runs. The product must remain provider/model independent.",
+  "reusable": [
+    "Pinned base/head collection, freshness checks and immutable local run records.",
+    "Diff-first on-demand read-only source inspection, including unchanged callers, without the former source-byte cap.",
+    "Structured reviewer output, exact source quotation validation, and separate execution/assessment states.",
+    "Timeout/cancellation handling, malformed/stale/zero-test rejection and explicit partial results.",
+    "Disposable OpenELIS worker using the repository launcher, with actual authentication and declared-check execution.",
+    "Reusable shared procedure, right-layer test guidance and separate evidence-media bundler."
+  ],
+  "causes": [
+    "Evidence requirements in the specification were deferred while implementation milestones described operational presets as implemented review levels.",
+    "Tests verify preset selection, command execution and report plumbing; they do not prove review quality, appropriate tests, meaningful probes or product/design acceptance.",
+    "The automated adapter loads only the generic procedure, not the specialized test-quality method, and cannot request verification after investigation.",
+    "The temporary cheap-review model preference was converted into a core allowlist.",
+    "The previous reports correctly caveat many limits; those caveats do not fulfill the omitted requirements or justify the level labels."
+  ],
+  "principles": [
+    "Review level selects evidence obligations; scope/application/lens selects breadth; provider/model and execution/spend settings are independent.",
+    "Use a small common protocol, repository adapters and reviewer adapters. Do not create a separate framework for each provider or repository.",
+    "Treat accepted requirements and authorized decisions as intent. Source, tests, PR prose and historical comments are evidence, not automatic policy.",
+    "Classify failing tests before fixing code: product defect, configuration, contract or obsolete expectation. Preserve required behavior while allowing approved test deletion.",
+    "Mutation probes change production behavior while keeping the test fixed. Test-source mutation may itself be an evaluation fixture, but is not the primary proof of regression protection.",
+    "Collect identity and evidence in the harness; do not make application hashes or fingerprint gates a prerequisite for ordinary workflows.",
+    "Keep per-run evidence and broader review-quality evaluation distinct. Neither green tests nor a plausible AI report alone establish acceptance."
+  ],
+  "levels": [
+    {
+      "level": "L1",
+      "name": "Mechanical verification",
+      "purpose": "Run selected deterministic checks without AI.",
+      "required": "Applicable repository checks: formatting/lint/build/tests and already-authored probes where selected. Record executed/skipped checks, raw results and revisions.",
+      "limit": "No claim that passing tests are adequate or that the change solves the right problem. No automatic full-suite requirement."
+    },
+    {
+      "level": "L2",
+      "name": "Semantic review",
+      "purpose": "Assess the intended change, ownership, consumers and test design within the selected scope.",
+      "required": "Accepted intent; diff plus needed surrounding source; approach and boundary review; behavior-to-test assessment; applicable focused checks when needed to substantiate claims, or explicit missing verification; supported findings, counterevidence, questions and omissions.",
+      "limit": "A lightweight review narrows breadth and effort, not the evidence standard for a finding. It does not claim runtime acceptance."
+    },
+    {
+      "level": "L3",
+      "name": "Verified behavior and test strength",
+      "purpose": "Check that the selected tests exercise the real failure and can detect it.",
+      "required": "L2 review plus focused executable checks at the appropriate layer; applicable mutation/revert probes with specific assertion evidence; bounded reviewer-requested experiments; explicit applicability reasons.",
+      "limit": "No contrived red test for a valid refactor/removal. A compile failure, timeout or zero tests is not a successful behavioral probe."
+    },
+    {
+      "level": "L4",
+      "name": "Running integration review",
+      "purpose": "Verify affected behavior in an isolated assembled application.",
+      "required": "L3 methods where applicable; loaded-candidate identity; actual service/database/configuration interactions; relevant persistence, lifecycle, negative and recovery scenarios; retained runtime evidence.",
+      "limit": "Boot/login alone is insufficient. Test the changed scope, without imposing every deployment scenario on every PR."
+    },
+    {
+      "level": "L5",
+      "name": "Full-stack product acceptance",
+      "purpose": "Demonstrate that the assembled product meets approved workflows and designs/mockups.",
+      "required": "L4 runtime evidence plus representative end-to-end journeys, observed user and saved-state outcomes, product/design comparison, rendered screenshots/video/traces, and an acceptance matrix with deviations and gaps.",
+      "limit": "Acceptance applies to the recorded workflows and candidate configuration, not the entire product. Designs define user-visible intent, not engineering ownership. Non-UI comparisons can be inapplicable with a reason. No label-only scenario substitution."
+    }
+  ],
+  "gaps": [
+    {
+      "id": "G01",
+      "title": "Levels must describe evidence, not duration",
+      "status": "Partial",
+      "phase": 1,
+      "origins": [
+        "User",
+        "OpenClinAI"
+      ],
+      "current": "L1\u2013L5 exist as presets. L2/L3 mainly change time and reasoning. L4 adds declared JUnit checks; L5 adds a check whose kind is scenario. These are executable distinctions, but they do not enforce the requested review practices.",
+      "consequence": "A completed run can carry a high-level label without the corresponding depth or acceptance evidence.",
+      "acceptance": "Version the level contract and validate its required evidence. A unit test relabeled scenario cannot complete L5. Missing required evidence yields partial/undetermined, not a silently downgraded or fully completed review. Preserve independent scope, model, execution and spending settings.",
+      "evidence": [
+        {
+          "label": "review/levels.mjs:1",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/levels.mjs#L1"
+        },
+        {
+          "label": "review/plan.mjs:16",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/plan.mjs#L16"
+        },
+        {
+          "label": "tests/review/levels.test.mjs:30",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/tests/review/levels.test.mjs#L30"
+        }
+      ],
+      "refs": [
+        "openclinai"
+      ]
+    },
+    {
+      "id": "G02",
+      "title": "Recover intent, decisions and changed expectations",
+      "status": "Partial",
+      "phase": 1,
+      "origins": [
+        "User",
+        "Daniel"
+      ],
+      "current": "Trusted base requirements and PR title/body are collected. Linked issue comments, review discussions, accepted direction changes and superseded PR context are not collected automatically. A free-text requirements field is available, but has no structured authority or revision relationship.",
+      "consequence": "The reviewer can enforce obsolete tests or the initial proposal after the maintainer approved a different boundary.",
+      "acceptance": "Record relevant intent and decisions with source, author/authority, retrieval time and revision. Keep old/new expectations when a refactor intentionally changes them. A fixture with an approved removal must not recommend rebuilding the removed machinery just to satisfy an old test. Unavailable or conflicting decisions remain explicit questions.",
+      "evidence": [
+        {
+          "label": "review/github.mjs:13",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/github.mjs#L13"
+        },
+        {
+          "label": "review/context.mjs:21",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/context.mjs#L21"
+        },
+        {
+          "label": "review/snapshot.mjs:35",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/snapshot.mjs#L35"
+        }
+      ],
+      "refs": [
+        "daniel"
+      ]
+    },
+    {
+      "id": "G03",
+      "title": "Track findings across review rounds",
+      "status": "Absent",
+      "phase": 1,
+      "origins": [
+        "Daniel",
+        "OpenClinAI"
+      ],
+      "current": "Reports have findings without stable identity, original reviewed commit, thread link or resolution history. Freshness checks correctly reject moved revisions, but there is no structured re-review handoff.",
+      "consequence": "Already fixed or declined concerns can be repeated, while newly introduced regressions can inherit an older clean result.",
+      "acceptance": "Re-review classifies prior items as still present, resolved, superseded, declined with a recorded reason, or unverified. Cite current and original evidence. Resolved items stay in private history without duplicate public comments. Reuse evidence only when its source/configuration remains applicable.",
+      "evidence": [
+        {
+          "label": "review/report.mjs:1",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/report.mjs#L1"
+        },
+        {
+          "label": "review/github.mjs:38",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/github.mjs#L38"
+        }
+      ],
+      "refs": [
+        "daniel",
+        "openclinai"
+      ]
+    },
+    {
+      "id": "G04",
+      "title": "Make approach and counterevidence review concrete",
+      "status": "Partial",
+      "phase": 1,
+      "origins": [
+        "User",
+        "Daniel"
+      ],
+      "current": "The common procedure says to inspect ownership, consider deletion and try to refute a finding. It does not require a recorded alternative, a reachable path proving the consequence, or counterevidence in the report.",
+      "consequence": "A plausible local patch can be recommended without considering whether it recreates an intentionally removed responsibility.",
+      "acceptance": "For consequential approach objections, record the intended problem, current owner, actual reachable code/data path and supported consequence, applicable simpler alternative and relevant counterevidence. Disproportionate redesign stays a suggestion unless a demonstrated defect justifies blocking. Test with a tempting duplicated validation fix and a correct boundary-preserving repair.",
+      "evidence": [
+        {
+          "label": "skills/review-change/SKILL.md:8",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/skills/review-change/SKILL.md#L8"
+        },
+        {
+          "label": "review/report.mjs:6",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/report.mjs#L6"
+        }
+      ],
+      "refs": [
+        "daniel"
+      ]
+    },
+    {
+      "id": "G05",
+      "title": "Inspect necessary dependencies, consumers and history",
+      "status": "Partial",
+      "phase": 2,
+      "origins": [
+        "Daniel",
+        "OpenClinAI"
+      ],
+      "current": "Diff-first on-demand reading of committed base/head and unchanged files works without a source-byte cap. The reviewer snapshot is depth 1; submodule contents and other repositories are not fetched, and the prompt disallows outside inspection.",
+      "consequence": "Cross-repository or history-dependent claims cannot be reliably investigated using the available tools.",
+      "acceptance": "Attach needed dependencies/consumers as pinned read-only sources through trusted collection. Permit bounded ancestry inspection when a claim needs history. Every source citation identifies repository and revision. A missing required dependency produces a question/coverage gap, not an invented conclusion. Keep unrelated source out of the default review.",
+      "evidence": [
+        {
+          "label": "review/reviewers/repository.mjs:14",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/reviewers/repository.mjs#L14"
+        },
+        {
+          "label": "review/reviewers/codex.mjs:31",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/reviewers/codex.mjs#L31"
+        }
+      ],
+      "refs": [
+        "daniel",
+        "stack"
+      ]
+    },
+    {
+      "id": "G06",
+      "title": "Review the assembled stack and both sides of contracts",
+      "status": "Documented, not wired",
+      "phase": 2,
+      "origins": [
+        "User",
+        "OpenClinAI"
+      ],
+      "current": "A plan holds one repository/base/head. There is no ordered PR-stack snapshot, combined candidate revision, or representation of proposed dependency heads versus recorded deployed pins.",
+      "consequence": "Individually plausible producer and consumer changes may compose incorrectly; a finding can be assigned to the wrong PR.",
+      "acceptance": "Resolve ordered stack/dependency revisions and the assembled state without merging upstream. Compare emitted and consumed contracts and relevant configuration. A fixture with two individually passing layers that fail together must be detected and attributed to the owning layer. Report stale ancestry/pins separately from code findings.",
+      "evidence": [
+        {
+          "label": "review/plan.mjs:40",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/plan.mjs#L40"
+        },
+        {
+          "label": "review/report.mjs:11",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/report.mjs#L11"
+        },
+        {
+          "label": "docs/ogc-1560-review-harness/specification.md:157",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/docs/ogc-1560-review-harness/specification.md#L157"
+        }
+      ],
+      "refs": [
+        "stack",
+        "daniel"
+      ]
+    },
+    {
+      "id": "G07",
+      "title": "Connect test adequacy and test-layer choice to the runner",
+      "status": "Documented, not wired",
+      "phase": 2,
+      "origins": [
+        "User",
+        "Daniel",
+        "OpenClinAI"
+      ],
+      "current": "meaningful-test-coverage contains useful right-layer guidance, including obsolete-test removal. The Codex adapter loads only review-change; there is no behavior-to-test assessment in the plan/report.",
+      "consequence": "Green tests can be treated as useful coverage even when they assert mock values or exercise the wrong layer.",
+      "acceptance": "For changed behavior, record the requirement, appropriate test layer, selected test, observable assertion and remaining gap. Pure calculations may use unit tests; persistence/framework behavior needs a real integration path; rendered state needs rendering; a user journey needs the running product. Detect a mock-only test that misses the actual regression, and accept legitimate removal of obsolete tests.",
+      "evidence": [
+        {
+          "label": "skills/meaningful-test-coverage/SKILL.md:10",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/skills/meaningful-test-coverage/SKILL.md#L10"
+        },
+        {
+          "label": "review/reviewers/codex.mjs:26",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/reviewers/codex.mjs#L26"
+        },
+        {
+          "label": "review/report.mjs:1",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/report.mjs#L1"
+        }
+      ],
+      "refs": [
+        "daniel",
+        "openclinai"
+      ]
+    },
+    {
+      "id": "G08",
+      "title": "Execute meaningful mutation and revert probes",
+      "status": "Documented, not wired",
+      "phase": 2,
+      "origins": [
+        "User",
+        "OpenClinAI",
+        "Research"
+      ],
+      "current": "Checks support only test/scenario commands and JUnit reports. No probe definition, controlled production mutation, base-code comparison, expected assertion or restoration evidence is implemented.",
+      "consequence": "The harness cannot demonstrate that a proposed test actually catches the defect it claims to prevent.",
+      "acceptance": "Predeclare the behavior, fixed tests, production mutation/revert and expected assertion. Show corrected pass \u2192 meaningful faulty variant fails the intended assertion \u2192 restored pass, in a disposable workspace. Distinguish survived, uncovered, equivalent/inapplicable, invalid mutation, setup/compile error, timeout and real detection. Cancellation discards mutated state. Refactors/removals may be explicitly inapplicable; never manufacture a red result.",
+      "evidence": [
+        {
+          "label": "review/checks.mjs:2",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/checks.mjs#L2"
+        },
+        {
+          "label": "docs/ogc-1560-review-harness/specification.md:245",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/docs/ogc-1560-review-harness/specification.md#L245"
+        }
+      ],
+      "refs": [
+        "openclinai",
+        "pit"
+      ]
+    },
+    {
+      "id": "G09",
+      "title": "Let the reviewer request a falsifying experiment",
+      "status": "Absent",
+      "phase": 2,
+      "origins": [
+        "Daniel",
+        "OpenClinAI"
+      ],
+      "current": "All supplied checks run before the reviewer; the environment is removed before the AI session starts. The reviewer may read source but cannot request a new test/probe and reconsider the result.",
+      "consequence": "A review cannot follow a newly discovered concern to the experiment that would confirm or refute it.",
+      "acceptance": "Support a bounded inspect \u2192 request check \u2192 isolated execution \u2192 reconsider sequence. The coordinator validates scope, authority, capabilities and execution limits; the model never receives unrestricted execution credentials. If a check cannot run, preserve the exact question/omission. Test a suspected defect that the requested experiment refutes.",
+      "evidence": [
+        {
+          "label": "review/run.mjs:38",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/run.mjs#L38"
+        },
+        {
+          "label": "review/reviewers/codex.mjs:38",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/reviewers/codex.mjs#L38"
+        }
+      ],
+      "refs": [
+        "daniel"
+      ]
+    },
+    {
+      "id": "G10",
+      "title": "Represent actual outcomes and evidence types",
+      "status": "Partial",
+      "phase": 2,
+      "origins": [
+        "Daniel",
+        "OpenClinAI",
+        "Research"
+      ],
+      "current": "JUnit test cases are called assertions; failure and error elements are flattened into passed:false. Raw logs are retained, but source/check quotations are the report's only evidence types. A separate media-bundling skill exists outside the runner.",
+      "consequence": "Test counts do not establish assertion quality. The current representation cannot prove an intended mutation failure or bind a screenshot, request/response and saved result to a claim.",
+      "acceptance": "Report test cases as test cases unless assertion counts are known. Preserve assertion failures versus infrastructure errors and links to raw reports. Support typed evidence such as command output, HTTP exchanges, persisted-state readback, browser traces, screenshots/videos and measurements. Validate artifact identity and make necessary evidence available to the reviewer; reuse the existing bundler where useful.",
+      "evidence": [
+        {
+          "label": "review/environments/openelis-check.py:63",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/environments/openelis-check.py#L63"
+        },
+        {
+          "label": "review/report.mjs:13",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/report.mjs#L13"
+        },
+        {
+          "label": "review/report.mjs:66",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/report.mjs#L66"
+        },
+        {
+          "label": "skills/evidence-bundle/SKILL.md:1",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/skills/evidence-bundle/SKILL.md#L1"
+        }
+      ],
+      "refs": [
+        "pit",
+        "verifier",
+        "openclinai"
+      ]
+    },
+    {
+      "id": "G11",
+      "title": "Bind runtime observations to the loaded candidate",
+      "status": "Partial",
+      "phase": 3,
+      "origins": [
+        "Daniel",
+        "OpenClinAI"
+      ],
+      "current": "OpenELIS is built from the selected checkout using dev-stack up --build. Smoke reports git rev-parse HEAD; later logs list containers/images. This is not a structured comparison of built artifacts with what the observed service loaded.",
+      "consequence": "A healthy but stale service could be credited as evidence for the reviewed source.",
+      "acceptance": "Record component/dependency revisions, built artifact/image identity, relevant configuration and the identity observed in the running candidate, using repository-appropriate methods. A stale-loaded-artifact fixture must fail even when checkout HEAD and login are correct. Collect this in the harness; do not introduce mandatory application fingerprint gates.",
+      "evidence": [
+        {
+          "label": "review/environments/openelis-start.sh:8",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/environments/openelis-start.sh#L8"
+        },
+        {
+          "label": "review/environments/openelis-smoke.py:55",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/environments/openelis-smoke.py#L55"
+        },
+        {
+          "label": "review/environments/openelis.mjs:54",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/environments/openelis.mjs#L54"
+        }
+      ],
+      "refs": [
+        "verifier"
+      ]
+    },
+    {
+      "id": "G12",
+      "title": "Exercise relevant lifecycle and integration behavior",
+      "status": "Partial",
+      "phase": 3,
+      "origins": [
+        "Daniel",
+        "OpenClinAI"
+      ],
+      "current": "The isolated OpenELIS environment and predeclared checks are real. Default verification covers authentication and an HTML root element. Runtime checks/scenarios must be supplied by the operator; the review has no risk-to-scenario coverage map.",
+      "consequence": "Fresh startup or a small API scenario can pass while the changed workflow fails with existing data, a restart, optional dependency absence or recovery.",
+      "acceptance": "Select applicable scenarios from the changed behavior and record why others are inapplicable. Execute real integration paths, saved-state readback and relevant negative/recovery/lifecycle cases. Distinguish fresh installation from upgrade testing. No universal requirement to run every scenario or whole suite for every PR.",
+      "evidence": [
+        {
+          "label": "review/environments/openelis-smoke.py:28",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/environments/openelis-smoke.py#L28"
+        },
+        {
+          "label": "review/plan.mjs:32",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/plan.mjs#L32"
+        },
+        {
+          "label": "docs/ogc-1560-review-harness/implementation-status.md:59",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/docs/ogc-1560-review-harness/implementation-status.md#L59"
+        }
+      ],
+      "refs": [
+        "daniel",
+        "verifier",
+        "openclinai"
+      ]
+    },
+    {
+      "id": "G13",
+      "title": "L5: full-stack product and design acceptance",
+      "status": "Absent from level contract",
+      "phase": 3,
+      "origins": [
+        "User"
+      ],
+      "current": "L5 needs only one kind:scenario check. Image and browser tools are disabled. There is no approved design/mockup input, rendered comparison, journey acceptance matrix or required media linked to the reviewed build.",
+      "consequence": "The implementation cannot substantiate the full-stack/design review the user intended by L5.",
+      "acceptance": "Run the assembled candidate with representative synthetic scenarios; map approved workflows and design/mockup references to observed user outcomes. Inspect rendered pages and relevant interactions, error/empty/loading states, permissions and persisted outcomes. Preserve screenshots/video or traces plus functional results and explicit divergences. Mockups define product intent, not engineering ownership. For non-UI work, mark visual comparison inapplicable with a reason; do not fabricate a design reference.",
+      "evidence": [
+        {
+          "label": "review/plan.mjs:33",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/plan.mjs#L33"
+        },
+        {
+          "label": "review/reviewers/codex.mjs:15",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/reviewers/codex.mjs#L15"
+        },
+        {
+          "label": "review/report.mjs:11",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/report.mjs#L11"
+        }
+      ],
+      "refs": []
+    },
+    {
+      "id": "G14",
+      "title": "Report coverage, questions and dispositions honestly",
+      "status": "Partial",
+      "phase": 1,
+      "origins": [
+        "User",
+        "Daniel",
+        "OpenClinAI"
+      ],
+      "current": "Execution and assessment are separated, invalid/stale output is rejected, and citations are checked. The schema has only summary, complete/partial, omissions and severity-ranked findings; it cannot encode questions, verification state, refuted claims or behavior coverage.",
+      "consequence": "A valid quotation can be mistaken for a verified consequence; no findings can conceal missing review dimensions.",
+      "acceptance": "Retain execution status separately from assessment. Record assessed behaviors/dimensions, evidence type, unresolved questions, supported/refuted findings and action/disposition independent of severity. Never promote missing evidence to no findings or treat a quotation check as proof of correctness. Completion must be checked against the selected level's evidence obligations.",
+      "evidence": [
+        {
+          "label": "review/report.mjs:1",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/report.mjs#L1"
+        },
+        {
+          "label": "review/report.mjs:39",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/report.mjs#L39"
+        },
+        {
+          "label": "review/run.mjs:74",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/run.mjs#L74"
+        }
+      ],
+      "refs": [
+        "daniel",
+        "openclinai"
+      ]
+    },
+    {
+      "id": "G15",
+      "title": "Provider independence and separate development cost policy",
+      "status": "Partial",
+      "phase": 1,
+      "origins": [
+        "User",
+        "OpenClinAI"
+      ],
+      "current": "Planning and execution hardcode Codex; the model allowlist is Sol/Luna. There are useful explicit time/reasoning controls and no silent retries, but provider capabilities are not a protocol.",
+      "consequence": "An economical testing preference has become product policy, and Claude/other reviewers cannot use the same harness contract.",
+      "acceptance": "Separate review level, scope/lens, environment, provider/model and execution/spend policy. Keep cheap Sol settings in a development profile. Adapters declare actual source/image/check-request/structured-output/cancellation/usage capabilities and fail clearly when required capabilities are absent. Prove conformance with a second independent adapter before claiming portability. Do not promise currency/token enforcement a provider cannot offer.",
+      "evidence": [
+        {
+          "label": "review/levels.mjs:2",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/levels.mjs#L2"
+        },
+        {
+          "label": "review/plan.mjs:17",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/plan.mjs#L17"
+        },
+        {
+          "label": "review/run.mjs:7",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/run.mjs#L7"
+        },
+        {
+          "label": "docs/ogc-1560-review-harness/specification.md:194",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/docs/ogc-1560-review-harness/specification.md#L194"
+        }
+      ],
+      "refs": [
+        "openclinai"
+      ]
+    },
+    {
+      "id": "G16",
+      "title": "Make mechanical checks and environments repository-owned",
+      "status": "Partial",
+      "phase": 1,
+      "origins": [
+        "User",
+        "Daniel"
+      ],
+      "current": "The shared core runs whitespace checks. Trusted base configuration can supply context and check commands, but executable checks require the OpenELIS environment, and the plan validator knows the exact repository name.",
+      "consequence": "Related repositories with different build systems cannot use the same executable review contract; the core risks accumulating repository-specific branches.",
+      "acceptance": "A small repository adapter supplies applicable deterministic commands, setup/readiness/cleanup and evidence collectors. L1 can run selected lint/build/test/probe checks with zero model calls, without booting OpenELIS unnecessarily. Validate a minimal second repository fixture and keep OpenELIS-specific boot logic in its adapter.",
+      "evidence": [
+        {
+          "label": "review/run.mjs:32",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/run.mjs#L32"
+        },
+        {
+          "label": "review/plan.mjs:16",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/plan.mjs#L16"
+        },
+        {
+          "label": "review/plan.mjs:31",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/plan.mjs#L31"
+        },
+        {
+          "label": "review/context.mjs:21",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/context.mjs#L21"
+        }
+      ],
+      "refs": [
+        "daniel"
+      ]
+    },
+    {
+      "id": "G17",
+      "title": "Validate isolation before unattended untrusted reviews",
+      "status": "Partial",
+      "phase": 4,
+      "origins": [
+        "User",
+        "Research"
+      ],
+      "current": "The OpenELIS worker has its own VM/Docker and no host mounts/forwarded agent. The source reviewer uses a read-only host process; the documentation explicitly says it is not a confidentiality boundary for all host reads. Hostile-fork penetration testing is unverified.",
+      "consequence": "Read-only source review must not be advertised as safe arbitrary public-fork automation on a credentialed workstation.",
+      "acceptance": "Separate trusted collection/publication and model credentials from untrusted source/test execution. Provide a dedicated reviewer sandbox with explicit readable sources and restricted credentials/network. Exercise injected repository instructions, attempted host reads, credential exposure and worker escape/cleanup fixtures before enabling public-fork automation. Never build fork code with privileged pull_request_target credentials.",
+      "evidence": [
+        {
+          "label": "review/environments/openelis.lima.yaml:8",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/environments/openelis.lima.yaml#L8"
+        },
+        {
+          "label": "review/reviewers/codex.mjs:8",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/review/reviewers/codex.mjs#L8"
+        },
+        {
+          "label": "docs/review-runner.md:192",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/docs/review-runner.md#L192"
+        }
+      ],
+      "refs": [
+        "github"
+      ]
+    },
+    {
+      "id": "G18",
+      "title": "Automated and managed-review integration",
+      "status": "Documented, not wired",
+      "phase": 4,
+      "origins": [
+        "User"
+      ],
+      "current": "Local CLI and skills exist. There is no review GitHub workflow, managed-review import/export contract, automated thread deduplication, or trusted dispatch/publication path.",
+      "consequence": "Codex/Claude/other automated review services cannot yet exchange evidence reliably with code-qa; a vendor comment is not equivalent to a verified code-qa level.",
+      "acceptance": "Expose the same protocol through CLI, agent entry points, trusted CI dispatch and imported reports. Preserve external origin, commit, capabilities and omissions. Use current-head checks, run deduplication and finding/thread identity before authorized publication. Review, publication and merging remain separate permissions; no automatic repair or merge.",
+      "evidence": [
+        {
+          "label": "docs/ogc-1560-review-harness/specification.md:196",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/docs/ogc-1560-review-harness/specification.md#L196"
+        },
+        {
+          "label": "docs/ogc-1560-review-harness/implementation-status.md:74",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/docs/ogc-1560-review-harness/implementation-status.md#L74"
+        }
+      ],
+      "refs": []
+    },
+    {
+      "id": "G19",
+      "title": "Evaluate review quality, not just runner reliability",
+      "status": "Documented, not executed",
+      "phase": 5,
+      "origins": [
+        "User",
+        "Research"
+      ],
+      "current": "39 automated tests exercise the harness, and a seeded live review demonstrated adapter integration. There is no completed held-out evaluation of missed defects, false alarms, harmful recommendations or repeated-run consistency.",
+      "consequence": "Passing infrastructure tests and a low finding count on real PRs do not show that the reviews are useful or rigorous.",
+      "acceptance": "Build a small versioned corpus of independently labeled defective and valid changes. Include approved deletion, weak tests, wrong-layer tests, consumer mismatch, stale runtime and design divergence. Freeze held-out cases, compare with a plain-review baseline under equal model/tool/spend settings, repeat trials and have maintainers adjudicate. Record misses, false positives, harmful fix proposals, coverage, cost and latency. Keep expected answers out of review inputs.",
+      "evidence": [
+        {
+          "label": "docs/ogc-1560-review-harness/implementation-status.md:20",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/docs/ogc-1560-review-harness/implementation-status.md#L20"
+        },
+        {
+          "label": "docs/ogc-1560-review-harness/specification.md:263",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/docs/ogc-1560-review-harness/specification.md#L263"
+        }
+      ],
+      "refs": [
+        "eval"
+      ]
+    },
+    {
+      "id": "G20",
+      "title": "Correct specifications, examples and tests together",
+      "status": "Partial / conflicting",
+      "phase": 1,
+      "origins": [
+        "User"
+      ],
+      "current": "The broad spec describes many desired practices, while milestone text calls L1\u2013L5 implemented and tests assert the old Sol ceiling and superficial scenario distinction. Specialized skills and evidence bundling remain separate from execution.",
+      "consequence": "Future work can keep preserving the mistaken contract because the documentation and tests encode it as expected behavior.",
+      "acceptance": "Replace obsolete level/model-policy expectations while keeping reliability protections. Align CLI help, examples, spec, status and skill entry points with one contract. Each delivery demonstrates a real capability and its negative control. Label historical L4/L5 runs by the old preset version and actual evidence; do not retroactively claim new-level acceptance.",
+      "evidence": [
+        {
+          "label": "tests/review/levels.test.mjs:30",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/tests/review/levels.test.mjs#L30"
+        },
+        {
+          "label": "docs/ogc-1560-review-harness/specification.md:280",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/docs/ogc-1560-review-harness/specification.md#L280"
+        },
+        {
+          "label": "docs/ogc-1560-review-harness/implementation-status.md:39",
+          "url": "https://github.com/DIGI-UW/code-qa/blob/853a24d557cc451bce89ca8743fcf52a807de6fb/docs/ogc-1560-review-harness/implementation-status.md#L39"
+        }
+      ],
+      "refs": []
+    }
+  ],
+  "sources": {
+    "openclinai": {
+      "label": "OpenClinAI PR #18 \u2014 pinned review process",
+      "url": "https://github.com/pmanko/openclinai.org/blob/26d0e53b24c6cb899370ee5c69c800b2f17020e1/specs/review-process.md"
+    },
+    "daniel": {
+      "label": "Daniel's QueryStore review procedure",
+      "url": "https://github.com/openmrs/openmrs-module-querystore/blob/72df9d938b1996bc3eb2f073adb0cea958ee9d1e/.claude/skills/pr-review/SKILL.md"
+    },
+    "verifier": {
+      "label": "Daniel's runtime verifier",
+      "url": "https://github.com/openmrs/openmrs-module-querystore/blob/72df9d938b1996bc3eb2f073adb0cea958ee9d1e/.claude/skills/pr-harden/verifier.md"
+    },
+    "stack": {
+      "label": "OpenClinAI stack-review brief",
+      "url": "https://github.com/pmanko/openclinai.org/blob/26d0e53b24c6cb899370ee5c69c800b2f17020e1/review/briefs/stack.md"
+    },
+    "chart": {
+      "label": "ChartSearchAI project guidance",
+      "url": "https://github.com/openmrs/openmrs-module-chartsearchai/blob/dc31cf2a1a7829a7498be2c18d0d44d313b3885a/CLAUDE.md"
+    },
+    "pit": {
+      "label": "PIT \u2014 mutation outcomes and equivalent mutations",
+      "url": "https://pitest.org/quickstart/basic_concepts/"
+    },
+    "eval": {
+      "label": "Anthropic \u2014 evaluating agents",
+      "url": "https://www.anthropic.com/research/demystifying-evals-for-ai-agents"
+    },
+    "github": {
+      "label": "GitHub \u2014 safe pull_request_target use",
+      "url": "https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target"
+    }
+  },
+  "excluded": [
+    "Mandatory multi-agent fan-out, endless repair/convergence loops, automatic commits/pushes/merges, or organization-wide blocking hooks.",
+    "OpenClinAI's clinical datasets, retrieval scores, 12B/model parity arms and numerical L0\u2013L5 mapping as universal requirements. Reuse the evidence techniques; adapt levels to the user's general review goals.",
+    "A universal requirement that all refactors fail against old code. Approved removals may delete tests; behavior-preserving refactors may pass unchanged tests.",
+    "ChartSearchAI's local rule against changing test expectations as a general rule. That would reproduce the obsolete-test failure the user wants to prevent.",
+    "Treating every runtime assertion as source-proven, or every source-proven defect as needing an artificial runtime reproduction. State the evidence type accurately.",
+    "Copying the reference implementation's weak probe outcome handling, shared-worktree mutation/restoration assumptions, or incomplete-result acceptance."
+  ],
+  "delivery": [
+    {
+      "phase": 1,
+      "title": "Correct the contract without breaking the useful runner",
+      "deliverable": "Version evidence-based levels; remove the product Sol gate; add intent, coverage and finding dispositions; separate adapters and repository policy; replace obsolete tests/docs.",
+      "proof": "A cheap local review honors an approved removal, preserves unresolved questions and rejects an unsupported L5 claim. L1 makes zero AI calls. Existing reliability tests remain meaningful."
+    },
+    {
+      "phase": 2,
+      "title": "Deliver test-quality and stack verification",
+      "deliverable": "Wire test-adequacy assessment, pinned consumer/stack sources, typed evidence and isolated mutation/revert execution; permit bounded requested checks.",
+      "proof": "One real OpenELIS change demonstrates useful tests and a meaningful mutation; a weak test survives the mutant and is reported; a setup error is inconclusive; a valid refactor is accepted; an incompatible stack contract is caught."
+    },
+    {
+      "phase": 3,
+      "title": "Deliver actual L4/L5 product evidence",
+      "deliverable": "Bind observed services to built artifacts, run appropriate integration/lifecycle cases, then execute one full OpenELIS journey against approved product/design intent with retained media and outcomes.",
+      "proof": "A deliberately stale deployment, a wrong persisted result and a visible design/workflow regression each prevent completion. The corrected candidate completes the acceptance matrix. This proves the capability, not every OpenELIS workflow."
+    },
+    {
+      "phase": 4,
+      "title": "Prove portability and safe automation",
+      "deliverable": "Complete a second reviewer adapter, a small non-OpenELIS repository fixture, dedicated review isolation, managed-result exchange and trusted CI/publication integration.",
+      "proof": "The same contract passes adapter conformance without hardcoded model assumptions; untrusted content cannot read host secrets or publish; stale/duplicate external findings cannot be posted as current verified results."
+    },
+    {
+      "phase": 5,
+      "title": "Measure review quality before a broader PR pilot",
+      "deliverable": "Run the implemented methods against labeled development and held-out cases; compare with a plain-review baseline and record adjudicated errors and costs.",
+      "proof": "Publish measured misses, false alarms, harmful repair suggestions, coverage and repeatability. Set acceptance targets before held-out execution. Only then make claims about effectiveness on live PR campaigns."
+    }
+  ],
+  "validation": {
+    "codeChanges": "None. No commits, pushes, merges, new AI review runs or application deployments performed in this audit.",
+    "tests": "Fresh npm test: 38 passed; one existing test was prevented from binding its local HTTP server by the sandbox. That test passed when rerun with local loopback access. All 39 existing tests therefore passed across these runs.",
+    "skills": "Seven skill definitions passed npm run lint.",
+    "limitations": "No fresh isolated OpenELIS boot, browser acceptance, mutation experiment, held-out review-quality evaluation, penetration test or remote CI refresh was performed. Historical runtime examples are cited as historical integration evidence only.",
+    "interpretation": "These results confirm existing runner behavior, not that the missing review capabilities work."
+  }
+}

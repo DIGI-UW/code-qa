@@ -57,6 +57,9 @@ MIT — see [LICENSE](LICENSE).
 
 ## Local review harness (v0.3)
 
+**Implementation roadmap:** use the [staged checklist](docs/ogc-1560-review-harness/roadmap.md), with acceptance criteria and negative controls at every stage. Current v0.3 levels below are historical execution presets, not completion of the requested evidence-based L1–L5 method.
+
+
 Run a review of an existing PR:
 
 ```sh
@@ -74,6 +77,5 @@ The [runner guide](docs/review-runner.md) includes installation, focused reviews
 limits, repository configuration and executable examples. Run `npm test` for
 no-credit acceptance tests. The [implementation record](docs/ogc-1560-review-harness/implementation-status.md)
 separates tested capabilities from remaining integrations and quality evaluation.
-The [specification](docs/ogc-1560-review-harness/specification.md) tracks the broader
-roadmap. Automatic publication, Claude integration and the model-quality pilot
+The [specification](docs/ogc-1560-review-harness/specification.md) defines the target contract; the checklist tracks implementation. Automatic publication, Claude integration and the model-quality pilot
 are later work.

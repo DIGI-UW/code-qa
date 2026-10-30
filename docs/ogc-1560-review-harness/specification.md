@@ -1,8 +1,8 @@
 # OGC-1560: code-qa revamp for automated and targeted review
 
-**Specification roadmap · 22 October 2026**
+**Specification · updated 30 October 2026**
 
-The bounded first version is implemented; see the [runner guide](../review-runner.md) and [validation status](implementation-status.md). Requirements below beyond that documented scope remain future work.
+Version 0.3 implements runner infrastructure, not the complete review method requested. The [implementation checklist](roadmap.md) is the current delivery order and acceptance contract. See the [runner guide](../review-runner.md) for existing commands and [validation status](implementation-status.md) for historical evidence.
 [Jira](https://uwdigi.atlassian.net/browse/OGC-1560) · [agreed goals](goals.md) · [research and validation](research-and-validation.md)
 
 ## Decision
@@ -35,72 +35,23 @@ The application selects the question and scope. Rigor selects how much verificat
 
 Targeted lenses include correctness, architecture/ownership, simplicity, test quality, security/access control, compatibility/configuration, and documentation. These are sections/checks within a review, not automatically separate agents. A targeted review can expand to a necessary caller/consumer, explaining why; unrelated defects go to a separate follow-up rather than silently enlarging the assignment.
 
-### Parameterized L1–L5 levels — implemented in v0.2
+### Parameterized L1–L5 — target evidence contract
 
-Requested on 22 October 2026. Adopt **L1–L5** as the public level names and
-expose a `--level` parameter. Level selects effort; `--application` selects the
-review type, and an optional `--lens` selects a concern such as ownership or
-security. These choices stay independent. Version 0.2 implements all five levels with one
-Codex reviewer and declared OpenELIS checks/scenarios. The runner guide describes
-the supported interface; dynamic probes and additional adapters remain later work.
+Level selects evidence obligations, not model effort. Application, scope/lens, provider/model, execution environment and spend settings are independent. These target levels are pending implementation; existing v0.3 labels describe historical presets and must not be credited as satisfying this contract.
 
-| Level | Purpose and selected work | AI usage |
-| --- | --- | --- |
-| **L1 — Mechanical** | Snapshot/configuration, selected deterministic checks and evidence validity. An isolated environment may run when those checks need it. | Zero model calls; works without credentials. |
-| **L2 — Lightweight** | L1 plus a focused source review of a question or small coherent change. Include the necessary caller/consumer context and accepted requirements. | One short reviewer session; no follow-up reviewer or automatic retry. This is the default for a requested lightweight AI review. |
-| **L3 — Standard** | L1 plus a general review of the declared change scope, including affected responsibilities, tests and neighboring code. Broader context than L2. | One reviewer session with a larger explicit allowance; it does not automatically add reviewers. |
-| **L4 — Verified** | L3 plus selected executable reproductions or contract checks and a challenge of consequential findings. | Extra model work only when the resolved plan requests it, within an explicit session/round cap. Deterministic verification need not use another model. |
-| **L5 — Deep** | L4 plus explicitly selected interaction/scenario or cross-repository verification; specialist review only where justified. | Opt-in budget and explicit reviewer/round limits. No unlimited loop or automatic model upgrade. |
+| Level | Required evidence |
+| --- | --- |
+| **L1 — Mechanical verification** | Applicable repository checks: formatting/lint/build/tests and already-authored probes where selected. Record executed/skipped checks, raw results and revisions. No claim that passing tests are adequate or that the change solves the right problem. No automatic full-suite requirement. |
+| **L2 — Semantic review** | Accepted intent; diff plus needed surrounding source; approach and boundary review; behavior-to-test assessment; applicable focused checks when needed to substantiate claims, or explicit missing verification; supported findings, counterevidence, questions and omissions. A lightweight review narrows breadth and effort, not the evidence standard for a finding. It does not claim runtime acceptance. |
+| **L3 — Verified behavior and test strength** | L2 review plus focused executable checks at the appropriate layer; applicable mutation/revert probes with specific assertion evidence; bounded reviewer-requested experiments; explicit applicability reasons. No contrived red test for a valid refactor/removal. A compile failure, timeout or zero tests is not a successful behavioral probe. |
+| **L4 — Running integration review** | L3 methods where applicable; loaded-candidate identity; actual service/database/configuration interactions; relevant persistence, lifecycle, negative and recovery scenarios; retained runtime evidence. Boot/login alone is insufficient. Test the changed scope, without imposing every deployment scenario on every PR. |
+| **L5 — Full-stack product acceptance** | L4 runtime evidence plus representative end-to-end journeys, observed user and saved-state outcomes, product/design comparison, rendered screenshots/video/traces, and an acceptance matrix with deviations and gaps. Acceptance applies to the recorded workflows and candidate configuration, not the entire product. Designs define user-visible intent, not engineering ownership. Non-UI comparisons can be inapplicable with a reason. No label-only scenario substitution. |
 
-These are code-qa's own levels, not a claim of parity with similarly numbered
-OpenClinAI stages. A narrow security question can use L5; a large stack can first
-use L1. Completion applies only to the selected scope. A source-only L2 report
-does not become incomplete merely because a full-stack suite was explicitly
-excluded; missing context needed to answer its actual question does make it
-partial. Large changes that do not fit the selected allowance are narrowed with
-an explicit scope or reported incomplete, never silently truncated or escalated.
+A targeted review and a full PR review can select any supported level; completion applies only to recorded scope. Missing required evidence is partial/undetermined, never silently downgraded. The standard for a supported finding does not weaken with a lighter level. Necessary focused checks can run at L2; L3 makes applicable test-strength experiments part of its evidence.
 
-**Sol ceiling.** Future AI reviews use Sol or a lighter model. Increasing the
-level changes the planned work, not this ceiling. Codex presets use an explicit
-allowlist of permitted Sol/Luna model IDs and reject Astra or unknown models
-before invocation. A different provider needs its own approved model allowlist;
-do not infer cross-provider equivalence from a model name. A higher model needs
-an explicit user request and a deliberate trusted-policy change, never a fallback
-or a PR-supplied override. Version 0.2 enforces this policy before invocation.
+**Provider/model policy.** The user's Sol preference applies to inexpensive immature-harness testing, not a permanent product ceiling. Remove the hardcoded allowlist from the generic contract; configure provider/model and supported time/session/spend controls independently. Missing capabilities fail explicitly. No silent paid escalation, fallback or extra reviewers. The current runner still enforces the old allowlist until Stage 1 is implemented.
 
-**Parameters and defaults.** Keep one versioned preset definition for the CLI,
-automated jobs and skill entry points. Each level resolves into application/lens,
-source scope and required neighbors, check selection, environment, adapter/model,
-reasoning effort where supported, reviewer time/session/
-round limits, and separate startup/test/cleanup limits. Record the preset version,
-requested overrides and effective values in both the plan and report. Explicit
-trusted overrides may change supported limits, but cannot turn L1 into an AI run
-or bypass the model ceiling. Unknown levels and unsupported capabilities fail
-before paid execution; never silently substitute another level.
-
-Implemented L2 preset version 2: one Codex Sol session, low reasoning
-where supported, and 120 seconds, with diff-first repository inspection and no source-byte cap. This is a
-smaller default, not an input-token or currency cap. Inspect relevant call paths during the same session; if necessary evidence cannot
-be inspected in time, report partial coverage instead of launching extra rounds. Higher presets must declare their
-own bounded defaults before they can execute. Environment selection remains
-independent: L2 can use existing evidence without startup, and L1 can boot an
-isolated application without spending AI credits.
-
-**Acceptance for this roadmap item:**
-
-- The same PR or targeted question can select L1–L5 through configuration or CLI;
-  the plan shows the effective work and cost limits before execution.
-- L1 makes zero model calls; L2 makes at most one session. A timeout, retry,
-  missing neighbor or incomplete review cannot silently increase the level,
-  reviewer count, model tier or budget.
-- Tests cover preset resolution, explicit overrides, unknown levels, unavailable
-  capabilities, the Sol ceiling and propagation of the selected limits to the
-  executor. Fake adapters count calls; a small live L2 fixture validates the
-  actual adapter and records usage without launching a quality pilot.
-- L4/L5 are executable only when their requested verification capabilities exist;
-  a source-only pass cannot be labelled a completed L4/L5 run. Existing
-  `mechanical`/`standard` aliases, if retained, resolve to L1/L3 through the same
-  preset definition and do not create a second procedure.
+**Versioning and acceptance.** Version plans and level semantics; preserve old reports as historical evidence, without relabeling them as completed new-level reviews. The [roadmap](roadmap.md) specifies implementation tasks, positive examples, negative controls and exit evidence at every stage. L1 makes zero AI calls. L4/L5 cannot complete on source review or startup/login alone. Approved refactors/removals may pass unchanged tests or delete obsolete ones.
 
 `plan` resolves application, check selection, required environment, rigor, adapter/model, context sources, permissions and maximum work before execution. It reports which checks are deterministic and which spend AI usage. Repository owners can preauthorize a fixed automatic-review plan, so each PR does not require a new prompt; manual requests can choose another supported plan.
 
@@ -146,7 +97,7 @@ Current baseline: `30528d176bd128b4765242d130f38ca9fb85d7b8`, verified against u
 | `commit-pr-hygiene` | Separate deterministic checks, optional editorial guidance and publication policy. Allow repository-preauthorized automatic summaries while preserving explicit authorization for human-facing messages and merge actions. |
 | Installer and lint | Preserve skill installation and add runner/protocol tests. The existing CI validates skill frontmatter; it does not validate review correctness. |
 
-Proposed structure: `review/` for the common protocol, deterministic checks, optional semantic lenses and adapters; `tests/review/` for offline fixtures and protocol tests; `examples/repositories/` for pilot configurations. Agent skills become thin entry points into this procedure. Consolidate ownership/simplicity/spec-alignment rules into one source, with focused entry points referring to it. Retire the runtime-specific `Workflow` template as a required path; preserve any optional multi-reviewer recipe only behind the declared L5 plan. Keep evidence-media packaging separate and reusable. Installation remains explicit and preserves existing hooks. Version 0.2 uses `review/` and `tests/review/`, with trusted base-revision repository configuration; remaining adapter interfaces are later work. The runner guide records the implemented subset.
+Proposed structure: `review/` for the common protocol, deterministic checks, optional semantic lenses and adapters; `tests/review/` for offline fixtures and protocol tests; `examples/repositories/` for pilot configurations. Agent skills become thin entry points into this procedure. Consolidate ownership/simplicity/spec-alignment rules into one source, with focused entry points referring to it. Retire the runtime-specific `Workflow` template as a required path; preserve any optional multi-reviewer recipe only behind an explicit execution plan, independent of level. Keep evidence-media packaging separate and reusable. Installation remains explicit and preserves existing hooks. Version 0.2 uses `review/` and `tests/review/`, with trusted base-revision repository configuration; remaining adapter interfaces are later work. The runner guide records the implemented subset.
 
 Migration must include an inventory of installed skills and policy conflicts, a versioned code-qa release, updated repository pins/installers, and removal of superseded copied procedures. A transition alias may point to the new procedure but may not carry a second implementation. Roll back by pinning the prior release and restoring the prior configuration. Do not install both old and new semantics and leave agents to choose.
 
@@ -270,19 +221,17 @@ Proposed targets to freeze before the pilot: at least 90% actionable precision a
 
 Then run report-only on 20 real PRs across the pilots. Improve rules using development cases and reviewed real feedback, not repeated tuning to the held-out set. Repeat the held-out evaluation when prompts, models, adapters or rules materially change. Semantic findings stay advisory in the initial release; only established deterministic rules are candidates for later blocking.
 
-## Implementation milestones
+## Implementation roadmap
 
-| Milestone | Concrete deliverable and exit condition |
-| --- | --- |
-| M1: revamp and mechanical path | Consolidate existing skills; define scope/rigor/budget, packet/report contracts and trusted configuration. Deliver a local CLI with snapshots, human/file input, deterministic checks and outcome validation. Test it without model credentials, including malformed output, stale code and zero-test cases. |
-| M2: isolated environment lifecycle | Implement prepare/start/readiness/verify/evidence/cleanup around one repository launcher. Demonstrate the actual PR source running with synthetic data, scoped resources and teardown. Test failed startup, timeouts, cancellation and concurrent runs. No real-PR pilot yet. |
-| M3: first usable AI review | Add one working Codex or Claude adapter with general and targeted reviews, supported budgets and validated output. Test fake-adapter failure cases and an actual bounded model invocation against controlled fixtures. The first version is a locally runnable harness with tested environment startup and one AI integration. |
-| M3a: parameterized review levels (v0.2) | Implemented L1–L5 presets, independent application/lens, supported overrides, effective-plan reporting and Sol/Luna allowlist. Local PR-URL collection and freshness are available. L4 executes declared tests; L5 additionally requires a declared scenario in isolated OpenELIS. See implementation-status.md for actual validation evidence. |
-| M4: portability and automation (remaining) | Add the second model adapter/environment, trusted GitHub workflow, managed-review import/export, deduplication and stack/dependency/thread collection. Local PR freshness and declared L4/L5 execution are delivered in v0.2; dynamic model-requested probes are not. Test adapter conformance, fork isolation and publication before enabling automated publication. |
-| M5: evaluation and advisory pilot | Run the held-out fixture evaluation using the working harness, then the report-only real-PR pilot. Publish costs, misses and false alarms; document migration, retention, maintenance and rollback. |
-| Later, separately justified | Optional local failure hooks, additional model adapters, narrow deterministic gates and optional repair handoff. No autonomous repair loop is required for M1–M5. |
+The [implementation checklist](roadmap.md), updated 30 October 2026, replaces the previous M1–M5 milestone sequence. Its five stages are:
 
-Before implementation, name the code-qa maintainers responsible for the runner, allowed providers and source-data policy, per-run budgets, retention policy and pilot maintainers. These are configuration/ownership decisions, not reasons to postpone the protocol and fixture work.
+1. Correct the contract, context, reports, model policy and obsolete expectations.
+2. Implement test-quality/probe verification and stack/consumer context.
+3. Demonstrate running integration and full-stack product/design evidence.
+4. Prove portability and safe automation.
+5. Measure review quality before a broader advisory pilot.
+
+Every stage has unchecked implementation tasks, explicit acceptance criteria, negative controls and a place to record evidence. The [gap inventory](gap-inventory.json) ties all 20 gaps to current code and reference practices. No stage is complete merely because the existing runner tests pass.
 
 ## Specification validation performed
 

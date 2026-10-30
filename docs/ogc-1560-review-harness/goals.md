@@ -1,6 +1,6 @@
 # OGC-1560 — agreed goals and constraints
 
-Captured 22 October 2026 from the user's requests in this conversation. This file records the requested outcome; implementation choices and numerical pilot targets in the specification remain proposals.
+Captured 22 October 2026, clarified 30 October 2026, from the user's requests in this conversation. This file records the requested outcome; implementation choices and numerical pilot targets in the specification remain proposals.
 
 1. **Revamp DIGI code-qa.** Rethink its purpose, structure and application. Do not merely add another runner beside overlapping skills. Inventory what to retain, rewrite, combine and retire.
 2. **Serve OpenELIS and related repositories generally.** Build a flexible review harness for general-purpose language-model reviewers, without analyzer-specific assumptions in its core.
@@ -20,12 +20,13 @@ Captured 22 October 2026 from the user's requests in this conversation. This fil
 15. **Build the first version before piloting it.** Deliver and test a locally runnable harness, including one AI adapter and one working repository environment, before expanding integrations and evaluating it on real PRs. Controlled fixture tests are implementation work, not the pilot.
 16. **Boot an isolated environment of the PR when verification needs it.** Include required application services, pinned dependencies, synthetic fixtures, readiness checks, evidence capture and scoped cleanup. Source-only checks can skip startup. Reuse repository launchers without touching active developer or shared deployments.
 
-17. **Cap future AI reviews at Sol.** Use Sol or a lighter model at every level. Higher effort must not silently select a stronger model, add reviewers or increase the budget. A higher model requires an explicit user request.
+17. **Keep immature-harness testing inexpensive.** Sol was a testing preference, not a permanent model ceiling. The product must support independently configured provider/model and spend controls, without silent escalation.
+18. **Make the levels enforce real review methods.** Include appropriate test-layer assessment, applicable mutation/revert proof, running integration evidence and L5 full-stack workflow/design acceptance. Remove obsolete tests when accepted responsibilities change.
 
 ## Current scope
 
-The user has authorized implementing, testing and pushing the first version: OpenELIS is the first isolated environment and one AI reviewer is included. Version 0.3 implements parameterized L1–L5 selection, enforced model/time/session limits, on-demand repository inspection, local PR collection and declared isolated checks/scenarios. See the implementation record for executed validation and remaining scope. Broader automation, additional adapters and the quality pilot remain later work. Do not change application behavior, install enforcement hooks, merge PRs or claim model-review reliability from a small smoke test.
+The user has authorized implementing, testing and pushing the harness, with OpenELIS as its first isolated environment and one initial AI reviewer. Version 0.3 has useful infrastructure; it does not complete the requested review methods. Follow the [implementation checklist](roadmap.md), including acceptance evidence at every stage. Do not change application behavior, install enforcement hooks, merge PRs or infer review reliability from smoke tests.
 
 ## Decisions still open
 
-The L1–L5 naming, selectable levels and Sol-or-lower ceiling are requested decisions. The proposed per-level work/defaults, exact provider/model allowlists, budget amounts, source-data policy, maintainer ownership, artifact retention and pilot thresholds still need implementation validation. No choice of those details should silently remove any goal above.
+L1–L5 evidence obligations and provider independence are requirements. Exact adapter-specific limits, source-data policy, maintainer ownership, retention and evaluation thresholds still need implementation validation. Configure them transparently without silently removing a goal. The current model allowlist is an implementation limitation to remove, not a user requirement.

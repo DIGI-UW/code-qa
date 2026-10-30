@@ -1,5 +1,12 @@
 # Implementation and validation
 
+## Audit correction — 30 October 2026
+
+The [implementation checklist](roadmap.md) is the current roadmap; all five remediation stages are pending. The [20-gap inventory](gap-inventory.json) records the source-backed audit.
+
+The entries below describe historical runner capabilities. Their L4/L5 labels refer to the old presets, not verified completion of the new evidence-based levels. In particular, executed JUnit/scenario checks do not establish test adequacy, mutation proof or full-stack/design acceptance. The Sol/Luna restriction remains in code but is no longer intended product policy. Existing tests validate runner behavior, not review quality.
+
+
 ## Version 0.3 — 29 October 2026
 
 AI reviews now begin with the diff and inspect exact committed source through a
