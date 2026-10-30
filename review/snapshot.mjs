@@ -32,8 +32,8 @@ export async function packetFor(plan) {
   for (const path of [...changed, ...plan.contextPaths]) sourcePath(path);
   return { schemaVersion: 2, sourceAccess: 'repository', snapshot: snap,
     application: plan.application, question: plan.question,
-    purpose: plan.purpose, requirements: plan.requirements, selectedPaths: changed,
-    contextNotes: plan.contextNotes ?? [], pullRequest: plan.pullRequest ? { url: plan.pullRequest.url, title: plan.pullRequest.title, body: plan.pullRequest.body, checks: plan.pullRequest.checks, checksWarning: plan.pullRequest.checksWarning } : null,
+    decisions: plan.decisions ?? [], history: plan.history ?? null, purpose: plan.purpose, requirements: plan.requirements, selectedPaths: changed,
+    contextNotes: plan.contextNotes ?? [], pullRequest: plan.pullRequest ? { url: plan.pullRequest.url, title: plan.pullRequest.title, body: plan.pullRequest.body, checks: plan.pullRequest.checks, checksWarning: plan.pullRequest.checksWarning, conversation: plan.pullRequest.conversation } : null,
     contextPaths: plan.contextPaths, files: [], omissions: [] };
 }
 

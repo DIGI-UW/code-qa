@@ -5,10 +5,10 @@ export function validateChecks(checks) {
   for (const check of checks) {
     if (!/^[a-z][a-z0-9-]{0,63}$/.test(check.id) || ids.has(check.id)) throw new Error('Check IDs must be unique safe names');
     ids.add(check.id);
-    if (!['test', 'scenario'].includes(check.kind)) throw new Error('Check kind must be test or scenario');
+    if (!['test', 'scenario', 'command'].includes(check.kind)) throw new Error('Check kind must be test, scenario or command');
     if (!Array.isArray(check.argv) || !check.argv.length || check.argv.some(x => typeof x !== 'string' || !x || x.includes('\0'))) throw new Error('Check argv must contain nonempty strings');
     if (!Number.isInteger(check.timeoutSeconds) || check.timeoutSeconds < 1 || check.timeoutSeconds > 3600) throw new Error('Check timeout must be 1..3600 seconds');
-    if (!Array.isArray(check.reports) || !check.reports.length) throw new Error('Check needs JUnit XML report patterns');
+    if (!Array.isArray(check.reports) || (check.kind !== 'command' && !check.reports.length)) throw new Error('Check needs JUnit XML report patterns');
     for (const path of check.reports) sourcePath(path);
     if (check.cwd) sourcePath(check.cwd);
   }

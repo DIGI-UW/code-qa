@@ -10,7 +10,7 @@ import subprocess
 import sys
 import xml.etree.ElementTree as ET
 
-def execute_check(spec, root, head):
+def execute_check(spec, root, head, dev_stack=True):
     root = root.resolve()
     def owned(path):
         resolved = Path(path).resolve()
@@ -26,7 +26,7 @@ def execute_check(spec, root, head):
         path.unlink()
     env = os.environ.copy()
     launcher = root / "scripts/dev-stack"
-    if launcher.exists():
+    if dev_stack and launcher.exists():
         result = subprocess.run([str(launcher), "env"], cwd=root, capture_output=True, text=True, check=True)
         for line in result.stdout.splitlines():
             # dev-stack emits shell-quoted `export NAME=value`; parse data, never eval it.
@@ -37,7 +37,7 @@ def execute_check(spec, root, head):
                 key, sep, value = words[0].partition("=")
                 if sep and key.replace("_", "").isalnum():
                     env[key] = value
-    log = root.parent / ("check-" + spec["id"] + ".log")
+    log = Path("/tmp") / ("check-" + spec["id"] + ".log")
     timed_out = False
     with log.open("w") as output:
         process = subprocess.Popen(spec["argv"], cwd=cwd, env=env,
@@ -55,6 +55,11 @@ def execute_check(spec, root, head):
             code = process.returncode
     if timed_out:
         raise ValueError("Check timed out; behavior unverified")
+    if spec["kind"] == "command":
+        return {"id": spec["id"], "kind": "command", "head": head, "executed": 1,
+                "measure": "commands", "exitCode": code, "status": "pass" if code == 0 else "fail",
+                "assertions": [{"name": "command exit status", "passed": code == 0}],
+                "logTail": log.read_text(errors="replace")[-4000:], "argv": spec["argv"]}
     assertions, skipped = [], 0
     found = reports()
     for report in found:
@@ -79,14 +84,14 @@ def execute_check(spec, root, head):
     if code != 0 and all(a["passed"] for a in assertions):
         raise ValueError("Command failed outside reported assertions; exit=" + str(code) + "\n" + tail)
     return {"id": spec["id"], "kind": spec["kind"], "head": head, "executed": len(assertions),
-            "skipped": skipped, "exitCode": code, "assertions": assertions,
+            "measure": "test cases", "skipped": skipped, "exitCode": code, "assertions": assertions,
             "status": "pass" if code == 0 and all(a["passed"] for a in assertions) else "fail",
             "logTail": tail, "argv": spec["argv"]}
 
 if __name__ == "__main__":
     config = json.loads(base64.b64decode(sys.argv[1]))
-    root = Path.home() / "review/source"
-    head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+    root = Path(config.get("root", str(Path.home() / "review/source")))
+    head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip() if config.get("verifyGit", True) else config["head"]
     if head != config["head"]:
         raise ValueError("Worker revision changed")
-    print(json.dumps(execute_check(config["check"], root, head)))
+    print(json.dumps(execute_check(config["check"], root, head, config.get("devStack", True))))

@@ -80,3 +80,5 @@ no-credit acceptance tests. The [implementation record](docs/ogc-1560-review-har
 separates tested capabilities from remaining integrations and quality evaluation.
 The [specification](docs/ogc-1560-review-harness/specification.md) defines the target contract; the checklist tracks implementation. Automatic publication, Claude integration and the model-quality pilot
 are later work.
+
+See the [execution guide](docs/ogc-1560-review-harness/execution-guide.md) for isolated mechanical commands, accepted decisions and re-review history.

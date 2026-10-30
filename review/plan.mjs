@@ -1,3 +1,5 @@
+import { validateDecisions } from './decisions.mjs';
+import { validateHistory } from './history.mjs';
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { snapshot, sourcePath, SHA } from './snapshot.mjs';
@@ -16,7 +18,7 @@ export function validatePlan(plan) {
   if (!['pr', 'targeted'].includes(plan.application) || (plan.application === 'targeted' && !plan.question?.trim())) throw new Error('Targeted review needs a question');
   if (!['mechanical', 'standard'].includes(plan.rigor)) throw new Error('Unknown rigor; use --level L1..L5');
   if (plan.rigor !== (plan.level === 'L1' ? 'mechanical' : 'standard')) throw new Error('Mechanical and AI level mismatch');
-  if (!['none', 'openelis'].includes(plan.environment)) throw new Error('Unknown environment');
+  if (!['none', 'openelis', 'container'].includes(plan.environment)) throw new Error('Unknown environment');
   if (plan.level === 'L1' ? plan.adapter !== 'none' : plan.adapter === 'none') throw new Error('L1 must use no AI; other levels require a reviewer');
   if (plan.adapter !== 'none') reviewerAdapter(plan.adapter).validate(plan);
   if (!['subscription', 'api', 'unknown'].includes(plan.billingMode)) throw new Error('Unknown billing mode');
@@ -31,8 +33,11 @@ export function validatePlan(plan) {
   for (const path of [...plan.paths, ...plan.contextPaths]) sourcePath(path);
   if (typeof plan.snapshot.repo !== 'string' || !plan.snapshot.repo.startsWith('/')) throw new Error('Repository must be absolute');
   if (typeof plan.purpose !== 'string' || typeof plan.requirements !== 'string') throw new Error('Invalid purpose/requirements');
+  validateDecisions(plan.decisions ?? []);
+  validateHistory(plan.history ?? null);
+  if (plan.environment === 'container' && (typeof plan.image !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._/@:-]+$/.test(plan.image))) throw new Error('Choose a trusted container image');
   validateChecks(plan.checks);
-  if (plan.checks.length && plan.environment !== 'openelis') throw new Error('Executable checks require the isolated OpenELIS environment');
+  if (plan.checks.length && plan.environment === 'none') throw new Error('Executable checks require an isolated environment');
   if (plan.environment === 'openelis' && plan.pullRequest && plan.pullRequest.repository !== 'DIGI-UW/OpenELIS-Global-2') throw new Error('OpenELIS environment only supports DIGI-UW/OpenELIS-Global-2');
   return plan;
 }
@@ -52,7 +57,8 @@ export async function createPlan(options) {
     rigor: ai ? 'standard' : 'mechanical', adapter: options.adapter ?? (ai ? 'codex' : 'none'), environment: options.environment ?? 'none',
     model: options.model ?? (ai ? defaults.model : ''), billingMode: options.billingMode ?? 'unknown', maxSessions: ai ? 1 : 0,
     reviewSeconds: options.reviewSeconds ?? (ai ? defaults.reviewSeconds : 0), startupSeconds: options.startupSeconds ?? 3600,
-    checks: options.checks ?? [],
+    checks: options.checks ?? [], image: options.image ?? 'node:22-bookworm',
+    decisions: options.decisions ?? [], history: options.history ?? null,
     contextNotes: options.contextNotes ?? [], pullRequest: options.pullRequest ?? null,
     overrides: Object.fromEntries(['model','reviewSeconds','startupSeconds','reasoningEffort']
       .filter(key => options[key] !== undefined).map(key => [key, options[key]])),

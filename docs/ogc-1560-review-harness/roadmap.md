@@ -41,12 +41,12 @@ Scope is independent of level. L1 may execute existing deterministic probes; L2 
 
 ### G02 — Recover intent, decisions and changed expectations
 
-- [ ] Collect accepted intent, linked decisions and changed expectations with source and authority.
+- [x] Collect accepted intent, linked decisions and changed expectations with source and authority.
 - [ ] **Acceptance:** Record relevant intent and decisions with source, author/authority, retrieval time and revision. Keep old/new expectations when a refactor intentionally changes them. A fixture with an approved removal must not recommend rebuilding the removed machinery just to satisfy an old test. Unavailable or conflicting decisions remain explicit questions.
 
 ### G03 — Track findings across review rounds
 
-- [ ] Add stable finding identities, original revisions and re-review dispositions.
+- [x] Add stable finding identities, original revisions and re-review dispositions.
 - [ ] **Acceptance:** Re-review classifies prior items as still present, resolved, superseded, declined with a recorded reason, or unverified. Cite current and original evidence. Resolved items stay in private history without duplicate public comments. Reuse evidence only when its source/configuration remains applicable.
 
 ### G04 — Make approach and counterevidence review concrete
@@ -66,7 +66,7 @@ Scope is independent of level. L1 may execute existing deterministic probes; L2 
 
 ### G16 — Make mechanical checks and environments repository-owned
 
-- [ ] Separate repository-owned mechanical checks and environments from the generic plan/runner.
+- [x] Separate repository-owned mechanical checks and environments from the generic plan/runner.
 - [ ] **Acceptance:** A small repository adapter supplies applicable deterministic commands, setup/readiness/cleanup and evidence collectors. L1 can run selected lint/build/test/probe checks with zero model calls, without booting OpenELIS unnecessarily. Validate a minimal second repository fixture and keep OpenELIS-specific boot logic in its adapter.
 
 ### G20 — Correct specifications, examples and tests together
@@ -76,7 +76,9 @@ Scope is independent of level. L1 may execute existing deterministic probes; L2 
 
 **First slice evidence:** v0.4 executes L1/L2, rejects unsupported higher-level claims before spend/startup, separates model settings from levels, and reports coverage/questions/dispositions. One low-effort Sol fixture review honored the approved obsolete-test deletion; its report explicitly did not claim tests ran. The fixture's two behavior tests were run separately. The test-quality skill is now loaded, but the structured behavior-to-test map and probe executor remain Stage 2 work.
 
-**Still needed in Stage 1:** automatic decision/conversation collection (G02), stable re-review identity/history (G03), fuller approach/alternative verification (G04), adapter conformance completion (G15), generic repository execution (G16), and complete example/skill migration (G20).
+**Second slice:** decision provenance, GitHub thread/discussion collection, private finding history and a generic isolated container executor are implemented. All 55 deterministic tests pass. A real L1 run executed both boundary tests, made zero model calls and removed its container (run `a93b3b57-6ba7-4eff-9e6d-8a27c308754e`, source `36d2eb43ed7b3de1a47c52cbebd9476c6a5dbf06`). See the [execution guide](execution-guide.md). Full stage acceptance still requires the combined semantic demonstration.
+
+**Remaining acceptance work in Stage 1:** automatic decision/conversation collection (G02), stable re-review identity/history (G03), fuller approach/alternative verification (G04), adapter conformance completion (G15), generic repository execution (G16), and complete example/skill migration (G20).
 
 ### Stage 1 exit
 

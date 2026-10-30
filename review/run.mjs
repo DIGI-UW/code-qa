@@ -1,3 +1,6 @@
+import { identifyFindings, reconcileHistory } from './history.mjs';
+import { decisionGaps } from './decisions.mjs';
+import { ContainerEnvironment } from './environments/container.mjs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { command, requireSuccess } from './process.mjs';
@@ -10,7 +13,7 @@ import { validateCheckResult } from './checks.mjs';
 import { OpenELISEnvironment } from './environments/openelis.mjs';
 
 export async function runReview(plan, outputRoot, { signal, reviewer,
-  environmentFactory = (p, d) => new OpenELISEnvironment(p, d), onProgress = () => {}, freshness = isPRFresh } = {}) {
+  environmentFactory = (p, d) => p.environment === 'container' ? new ContainerEnvironment(p, d) : new OpenELISEnvironment(p, d), onProgress = () => {}, freshness = isPRFresh } = {}) {
   validatePlan(plan);
   const directory = runDirectory(outputRoot, plan);
   await mkdir(outputRoot, { recursive: true, mode: 0o700 });
@@ -39,7 +42,7 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
       plan.snapshot.mergeBase, plan.snapshot.head, '--', ...packet.selectedPaths], { signal, log: join(directory, 'whitespace.log') });
     if (![0, 2].includes(diff.code) || diff.timedOut || diff.cancelled || diff.overflow || diff.spawnError) requireSuccess(diff, 'Whitespace check');
     run.checks.push({ id: 'whitespace', status: diff.code === 0 ? 'pass' : 'fail', evidence: diff.stdout.trim(), paths: packet.selectedPaths });
-    if (plan.environment === 'openelis') {
+    if (plan.environment !== 'none') {
       const environment = environmentFactory(plan, directory);
       try {
         await phase('environment-start');
@@ -69,7 +72,18 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
       validateSchema(reviewed.report, reviewerSchema);
       await captureSourceEvidence(reviewed.report, packet);
       await writeFile(join(directory, 'packet.json'), JSON.stringify(packet, null, 2) + '\n', { mode: 0o600 });
+      if (reviewed.report.priorFindings?.length) {
+        const evidenceReport = { ...reviewed.report, findings: reviewed.report.priorFindings.filter(d => d.evidence.length).map(d => ({ title: d.id, consequence: d.reason, owner: 'history', severity: 'low', disposition: 'suggestion', counterevidence: d.reason, alternative: '', evidence: d.evidence })) };
+        await captureSourceEvidence(evidenceReport, packet);
+        validateReviewer(evidenceReport, packet, run.checks);
+      }
       run.reviewer = validateReviewer(reviewed.report, packet, run.checks); run.usage.reported = reviewed.usage;
+      const repository = plan.pullRequest?.repository ?? plan.snapshot.repo;
+      run.findings = identifyFindings(run.reviewer, repository, plan.snapshot.head);
+      run.history = reconcileHistory(plan.history, run.reviewer, run.findings, repository, plan.snapshot.head);
+      await writeFile(join(directory, 'history.json'), JSON.stringify(run.history, null, 2) + '\n', {mode:0o600});
+      run.reasons.push(...run.history.rounds.filter(r => r.head === plan.snapshot.head && r.status === 'unverified').map(r => 'Prior finding unverified: ' + r.id));
+      run.reasons.push(...decisionGaps(plan.decisions ?? []), ...(plan.pullRequest?.conversation?.gaps ?? []));
       run.inspection = reviewed.inspection ?? null;
       run.adapterDiagnostics = reviewed.diagnostics ?? [];
       run.reasons.push(...coverageGaps(run.reviewer));

@@ -5,6 +5,7 @@ import { reviewWithCodex } from './codex.mjs';
 const adapters = {
   codex: {
     evidence: ['source-review', 'behavior-assessment'],
+    capabilities: { source:true, images:false, checkRequests:false, structuredOutput:true, cancellation:true, usage:true, hardCurrencyLimit:false },
     review: reviewWithCodex,
     validate(plan) {
       if (typeof plan.model !== 'string' || !plan.model.trim() || /[\x00-\x1f]/.test(plan.model)) throw new Error('Choose a nonempty model ID');
