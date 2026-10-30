@@ -27,7 +27,7 @@ export const reviewerSchema = {
         severity: { type: 'string', enum: ['high', 'medium', 'low'] },
         evidence: { type: 'array', minItems: 1, items: {
           type: 'object', additionalProperties: false,
-          properties: { kind: { type: 'string', enum: ['source', 'check'] }, path: { type: 'string' },
+          properties: { sourceId:{type:'string'}, kind: { type: 'string', enum: ['source', 'check'] }, path: { type: 'string' },
             side: { type: 'string', enum: ['base', 'head'] }, line: { type: 'integer' },
             checkId: { type: 'string' }, quote: { type: 'string' } },
           required: ['kind', 'path', 'side', 'line', 'checkId', 'quote'],
@@ -40,7 +40,7 @@ export const reviewerSchema = {
 const evidenceSchema = reviewerSchema.properties.findings.items.properties.evidence;
 reviewerSchema.properties.priorFindings = { type: 'array', items: {
   type: 'object', additionalProperties: false,
-  properties: { id: {type:'string'}, currentFindingId: {type:'string'}, status: {type:'string',enum:['still-present','resolved','superseded','declined','unverified']}, reason: {type:'string'}, evidence: evidenceSchema },
+  properties: { id: {type:'string'}, currentFindingId: {type:'string'}, status: {type:'string',enum:['still-present','resolved','superseded','declined','unverified']}, reason: {type:'string'}, evidence: {...evidenceSchema,minItems:0} },
   required: ['id','currentFindingId','status','reason','evidence'],
 } };
 reviewerSchema.properties.findings.items.properties.approach = {
@@ -48,6 +48,27 @@ reviewerSchema.properties.findings.items.properties.approach = {
   properties: Object.fromEntries(['problem','reachablePath','simplerAlternative','alternativeEvidence'].map(k => [k,{type:'string'}])),
   required:['problem','reachablePath','simplerAlternative','alternativeEvidence'],
 };
+
+reviewerSchema.properties.behaviors = {type:'array',items:{type:'object',additionalProperties:false,
+  properties:{...Object.fromEntries(['behavior','requirement','layer','test','assertion','gap','checkId','probeId','applicabilityReason'].map(k=>[k,{type:'string'}])),gapStatus:{type:'string',enum:['none','open']},scope:{type:'string',enum:['in-scope','out-of-scope','inapplicable']}},
+  required:['behavior','requirement','layer','test','assertion','gap','gapStatus','checkId','probeId'],
+}};
+reviewerSchema.properties.requestedChecks = {type:'array',items:{type:'object',additionalProperties:false,
+  properties:{id:{type:'string'},reason:{type:'string'},falsifies:{type:'string'}},required:['id','reason','falsifies'],
+}};
+export function verificationGaps(report, plan, checks, probes) {
+  if (!plan.requiredEvidence.includes('test-strength')) return [];
+  const gaps=[];
+  if (!report.behaviors?.length) gaps.push('Missing behavior-to-test map');
+  for(const b of report.behaviors ?? []) {
+    if(['out-of-scope','inapplicable'].includes(b.scope)) {if(!b.applicabilityReason?.trim())gaps.push('Missing scope rationale: '+b.behavior);continue;}
+    if(!b.behavior.trim() || !b.requirement.trim() || !b.layer.trim() || !b.assertion.trim()) gaps.push('Incomplete behavior-to-test assessment');
+    if(b.gapStatus!=='none') gaps.push(b.behavior+': '+(b.gap || 'Unresolved verification gap'));
+    if(!checks.some(c=>c.id===b.checkId && c.kind==='test' && c.executed>0 && ['pass','fail'].includes(c.status))) gaps.push('Behavior lacks executed test: '+b.behavior);
+    if(!probes.some(p=>p.id===b.probeId && ['detected','inapplicable'].includes(p.outcome))) gaps.push('Behavior lacks test-strength evidence: '+b.behavior);
+  }
+  return gaps;
+}
 
 // The CLI's schema request is not validation. Reject malformed or incomplete reports locally.
 export function validateSchema(value, schema, label = 'report') {
@@ -82,7 +103,7 @@ export function validateReviewer(report, packet, checks) {
     for (const evidence of finding.evidence) {
       if (!evidence.quote.trim()) throw new Error('Empty evidence quotation');
       if (evidence.kind === 'source') {
-        const file = packet.files.find(f => f.path === evidence.path && f.side === evidence.side);
+        const file = packet.files.find(f => f.path === evidence.path && f.side === evidence.side && (f.sourceId ?? '') === (evidence.sourceId ?? ''));
         const lines = file?.text.split('\n');
         const line = lines?.[evidence.line - 1];
         const column = line?.indexOf(evidence.quote.split('\n')[0]) ?? -1;
@@ -113,7 +134,9 @@ export function renderReport(run) {
     `Revision: ${run.plan.snapshot.head}`, `Application: ${run.plan.application}${run.plan.question ? ' — ' + run.plan.question : ''}`,
     `Environment: ${run.plan.environment}. Reviewer: ${run.plan.adapter}.`, '', '## Required evidence', '', ...run.plan.requiredEvidence.map(x => '- ' + x), '', '## Checks', ''];
   for (const check of run.checks) lines.push(`- ${check.id}: ${check.status}${check.executed !== undefined ? ` (${check.executed} ${check.measure ?? 'assertions'})` : ''}`);
+  if(run.probes?.length) lines.push('', '## Test-strength probes', '', ...run.probes.map(p=>'- '+p.id+': '+p.outcome+(p.reason?' — '+p.reason:'')));
   if (run.reviewer) {
+    if(run.reviewer.behaviors?.length) lines.push('', '## Behavior and test coverage', '', ...run.reviewer.behaviors.map(b=>'- '+b.behavior+' ['+(b.scope ?? 'in-scope')+']: '+b.layer+'; test '+(b.test || 'missing')+'; assertion '+b.assertion+(b.gap?' — Gap: '+b.gap:'')));
     lines.push('', '## Reviewer assessment', '', run.reviewer.summary);
     lines.push('', '## Coverage', '', ...run.reviewer.assessments.map(a => '- ' + a.area + ': ' + a.status + ' — ' + a.reason));
     if (run.reviewer.questions.length) lines.push('', '## Unresolved questions', '',
@@ -124,10 +147,11 @@ export function renderReport(run) {
       if (finding.alternative) lines.push('', 'Alternative: ' + finding.alternative);
       for (const evidence of finding.evidence) {
         if (evidence.kind === 'source') {
-          const sha = evidence.side === 'head' ? run.plan.snapshot.head : run.plan.snapshot.mergeBase;
+          const attached=evidence.sourceId ? run.plan.sources?.find(s=>s.id===evidence.sourceId) : null;
+          const sha = attached?.revision ?? (evidence.side === 'head' ? run.plan.snapshot.head : run.plan.snapshot.mergeBase);
           const path = evidence.path.split('/').map(encodeURIComponent).join('/');
-          const url = run.plan.pullRequest ? `https://github.com/${run.plan.pullRequest.repository}/blob/${sha}/${path}#L${evidence.line}` : null;
-          const label = `${evidence.side}:${evidence.path}:${evidence.line}`;
+          const url = run.plan.pullRequest ? `https://github.com/${attached?.repository ?? run.plan.pullRequest.repository}/blob/${sha}/${path}#L${evidence.line}` : null;
+          const label = `${attached?.repository ?? evidence.side}@${sha}:${evidence.path}:${evidence.line}`;
           lines.push('', url ? `[${label}](${url})` : label, '', ...evidence.quote.split('\n').map(line => '> ' + line));
         } else lines.push('', `Check: ${evidence.checkId}`, '', '> ' + evidence.quote);
       }

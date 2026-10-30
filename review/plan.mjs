@@ -1,3 +1,5 @@
+import { validateSources } from './sources.mjs';
+import { validateProbes } from './probes.mjs';
 import { validateDecisions } from './decisions.mjs';
 import { validateHistory } from './history.mjs';
 import { randomUUID } from 'node:crypto';
@@ -23,7 +25,7 @@ export function validatePlan(plan) {
   if (plan.adapter !== 'none') reviewerAdapter(plan.adapter).validate(plan);
   if (!['subscription', 'api', 'unknown'].includes(plan.billingMode)) throw new Error('Unknown billing mode');
   if (plan.level === 'L1' && plan.model) throw new Error('L1 cannot select a model');
-  if (plan.maxUsd !== undefined || plan.maxTokens !== undefined || plan.maxSessions !== (plan.level === 'L1' ? 0 : 1)) throw new Error('Hard token/currency caps and extra reviewer sessions are unsupported');
+  if (plan.maxUsd !== undefined || plan.maxTokens !== undefined || plan.maxSessions !== (plan.level === 'L1' ? 0 : 1 + (plan.maxRounds ?? 0))) throw new Error('Hard token/currency caps and extra reviewer sessions are unsupported');
   integer(plan.reviewSeconds, 'reviewSeconds', plan.level === 'L1' ? 0 : 1, 1800);
   integer(plan.startupSeconds, 'startupSeconds', 1, 7200);
   if ('maxContextBytes' in plan) throw new Error('Source-byte limits were removed; create a repository review plan');
@@ -33,10 +35,18 @@ export function validatePlan(plan) {
   for (const path of [...plan.paths, ...plan.contextPaths]) sourcePath(path);
   if (typeof plan.snapshot.repo !== 'string' || !plan.snapshot.repo.startsWith('/')) throw new Error('Repository must be absolute');
   if (typeof plan.purpose !== 'string' || typeof plan.requirements !== 'string') throw new Error('Invalid purpose/requirements');
+  validateSources(plan.sources ?? []);
+  integer(plan.historyDepth ?? 1,'historyDepth',1,1000);
   validateDecisions(plan.decisions ?? []);
   validateHistory(plan.history ?? null);
   if (plan.environment === 'container' && (typeof plan.image !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._/@:-]+$/.test(plan.image))) throw new Error('Choose a trusted container image');
   validateChecks(plan.checks);
+  validateChecks(plan.experiments ?? []);
+  integer(plan.maxRounds ?? 0,'maxRounds',0,2);
+  validateProbes(plan.probes ?? [],plan.checks);
+  if (plan.probes?.length && plan.environment !== 'container') throw new Error('Probes currently require the isolated container executor');
+  if (plan.experiments?.length && plan.environment === 'none') throw new Error('Experiments require isolated execution');
+  if (new Set([...plan.checks,...(plan.experiments ?? [])].map(c=>c.id)).size !== plan.checks.length+(plan.experiments?.length ?? 0)) throw new Error('Check and experiment IDs must be unique');
   if (plan.checks.length && plan.environment === 'none') throw new Error('Executable checks require an isolated environment');
   if (plan.environment === 'openelis' && plan.pullRequest && plan.pullRequest.repository !== 'DIGI-UW/OpenELIS-Global-2') throw new Error('OpenELIS environment only supports DIGI-UW/OpenELIS-Global-2');
   return plan;
@@ -55,9 +65,9 @@ export async function createPlan(options) {
     purpose: options.purpose ?? 'Review the selected change for actionable defects and misplaced responsibilities.',
     requirements: options.requirements ?? '', paths: options.paths ?? [], contextPaths: options.contextPaths ?? [],
     rigor: ai ? 'standard' : 'mechanical', adapter: options.adapter ?? (ai ? 'codex' : 'none'), environment: options.environment ?? 'none',
-    model: options.model ?? (ai ? defaults.model : ''), billingMode: options.billingMode ?? 'unknown', maxSessions: ai ? 1 : 0,
+    model: options.model ?? (ai ? defaults.model : ''), billingMode: options.billingMode ?? 'unknown', maxSessions: ai ? 1 + (options.maxRounds ?? 0) : 0, maxRounds: options.maxRounds ?? 0,
     reviewSeconds: options.reviewSeconds ?? (ai ? defaults.reviewSeconds : 0), startupSeconds: options.startupSeconds ?? 3600,
-    checks: options.checks ?? [], image: options.image ?? 'node:22-bookworm',
+    sources:options.sources ?? [],historyDepth:options.historyDepth ?? 1, checks: options.checks ?? [], probes: options.probes ?? [], experiments:options.experiments ?? [], image: options.image ?? 'node:22-bookworm',
     decisions: options.decisions ?? [], history: options.history ?? null,
     contextNotes: options.contextNotes ?? [], pullRequest: options.pullRequest ?? null,
     overrides: Object.fromEntries(['model','reviewSeconds','startupSeconds','reasoningEffort']

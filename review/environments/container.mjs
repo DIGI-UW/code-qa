@@ -40,6 +40,15 @@ export class ContainerEnvironment {
       {input:script,signal,timeoutMs:(check.timeoutSeconds+30)*1000,maxBytes:16*1024*1024});
     return JSON.parse(result.stdout.trim());
   }
+  async runProbe(probe, signal) {
+    const collector = (await readFile(new URL('./openelis-check.py', import.meta.url),'utf8')).split('if __name__ == "__main__":')[0];
+    const runner = await readFile(new URL('./probe.py', import.meta.url),'utf8');
+    const payload = Buffer.from(JSON.stringify({probe,check:this.plan.checks.find(c=>c.id===probe.checkId),head:this.plan.snapshot.head})).toString('base64');
+    const script = collector + '\n' + runner + '\nconfig=json.loads(base64.b64decode(sys.argv[1]))\nprint(json.dumps(execute_probe(config["probe"],config.get("check"),Path("/workspace"),config["head"])))';
+    const timeout = (this.plan.checks.find(c=>c.id===probe.checkId)?.timeoutSeconds ?? 1) * 3 + 60;
+    const result = await this.call('probe-'+probe.id,['docker','exec','-i',this.name,'python3','-',payload],{input:script,signal,timeoutMs:timeout*1000,maxBytes:16*1024*1024});
+    return JSON.parse(result.stdout.trim());
+  }
   async collect() {
     if (this.owned) await this.call('identity-evidence',['docker','inspect',this.name,'--format','{{json .State}} {{json .HostConfig}}']);
   }

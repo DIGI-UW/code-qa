@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-30",
+  "scope": "Stage 2 implementation and controlled validation; full roadmap acceptance remains open",
+  "deterministicTests": 62,
+  "realProbeRuns": [
+    {"run":"34581962-070a-4aa4-84b2-f06421d62fb0","repository":"synthetic decimal boundary fixture","head":"36d2eb43ed7b3de1a47c52cbebd9476c6a5dbf06","baseline":"pass","mutant":"specific precision assertion failed","restored":"pass","cleanup":"removed"},
+    {"run":"d8795553-2c63-4daa-a8e8-6253b0e74866","repository":"DIGI-UW/OpenELIS-Global-2","head":"37c4bc496f79feb047b2b3a68ead2b081b231571","test":"BoundedDecimalTest","testCases":3,"baseline":"pass","mutant":"acceptsTheNumbersAnalyzersReport failed on 7.5","restored":"pass","cleanup":"removed"}
+  ],
+  "negativeControls": ["weak assertion survives mutant","compile error is inconclusive","timeout is inconclusive","wrong assertion cannot establish detection","fixed-test mutation rejected","stale dependency pin and wrong ancestry expose gaps","undeclared reviewer commands never execute"],
+  "liveReviewer": {"model":"gpt-6.1-sol","effort":"low","status":"partial","reason":"Initial live runs exposed strict schema and explicit scope/gap protocol issues; retain those results rather than relabel them as complete"},
+  "unverified": ["held-out review quality","full OpenELIS runtime and product acceptance","unattended fork isolation","second real reviewer adapter"]
+}

@@ -31,7 +31,7 @@ export function reconcileHistory(prior, report, current, repository, head) {
     seen.add(d.id);
     if (!['still-present', 'resolved', 'superseded', 'declined', 'unverified'].includes(d.status)) throw new Error('Invalid prior finding state');
     if (d.status !== 'unverified' && !d.evidence.length) throw new Error('Re-review needs current evidence');
-    if (d.status === 'still-present' && !current.some(f => f.id === d.currentFindingId)) throw new Error('Still-present item must link a current finding');
+    if (d.status === 'still-present' && !current.some(f => f.id === d.currentFindingId || f.title === d.currentFindingId)) throw new Error('Still-present item must link a current finding');
     return { ...d, head, originalHead: original.originalHead, originalEvidence: original.evidence };
   });
   for (const old of prior.findings) if (!seen.has(old.id)) rounds.push({ id: old.id, status: 'unverified', reason: 'No current assessment', head, originalHead: old.originalHead, originalEvidence: old.evidence, evidence: [] });

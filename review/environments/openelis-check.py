@@ -53,11 +53,15 @@ def execute_check(spec, root, head, dev_stack=True):
                 os.killpg(process.pid, signal.SIGKILL)
                 process.wait()
             code = process.returncode
+    def inconclusive(outcome, reason):
+        return {"id": spec["id"], "kind": spec["kind"], "head": head, "status": "error", "outcome": outcome,
+                "executed": 0, "measure": "test cases", "exitCode": code, "assertions": [], "reason": reason,
+                "logTail": log.read_text(errors="replace")[-4000:]}
     if timed_out:
-        raise ValueError("Check timed out; behavior unverified")
+        return inconclusive("timeout", "Check timed out; behavior unverified")
     if spec["kind"] == "command":
         return {"id": spec["id"], "kind": "command", "head": head, "executed": 1,
-                "measure": "commands", "exitCode": code, "status": "pass" if code == 0 else "fail",
+                "outcome": "command-pass" if code == 0 else "command-failure", "measure": "commands", "exitCode": code, "status": "pass" if code == 0 else "fail",
                 "assertions": [{"name": "command exit status", "passed": code == 0}],
                 "logTail": log.read_text(errors="replace")[-4000:], "argv": spec["argv"]}
     assertions, skipped = [], 0
@@ -70,22 +74,27 @@ def execute_check(spec, root, head, dev_stack=True):
                 skipped += 1
                 continue
             failure = case.find("failure")
-            if failure is None:
-                failure = case.find("error")
+            error = case.find("error")
+            outcome = "infrastructure-error" if error is not None else "assertion-failure" if failure is not None else "pass"
+            if error is not None:
+                failure = error
             assertions.append({"name": (case.get("classname", "") + "." + case.get("name", "")).strip("."),
-                               "passed": failure is None,
+                               "passed": failure is None, "outcome": outcome,
                                "detail": "" if failure is None else ((failure.get("message", "") + " " + (failure.text or ""))[:2000]),
                                "report": str(report.relative_to(root))})
     tail = log.read_text(errors="replace")[-4000:]
     if not assertions:
-        raise ValueError("No executed tests in fresh JUnit reports; exit=" + str(code) + "\n" + tail)
+        return inconclusive("uncovered" if code == 0 else "infrastructure-error", "No executed tests in fresh JUnit reports; exit=" + str(code) + "\n" + tail)
     if len(assertions) > 2000:
         raise ValueError("More than 2000 assertions; narrow the selected verification")
     if code != 0 and all(a["passed"] for a in assertions):
-        raise ValueError("Command failed outside reported assertions; exit=" + str(code) + "\n" + tail)
+        return inconclusive("infrastructure-error", "Command failed outside reported test cases; exit=" + str(code) + "\n" + tail)
+    infrastructure = any(a["outcome"] == "infrastructure-error" for a in assertions)
     return {"id": spec["id"], "kind": spec["kind"], "head": head, "executed": len(assertions),
+            "outcome": "infrastructure-error" if infrastructure else "pass" if code == 0 and all(a["passed"] for a in assertions) else "assertion-failure",
+            "rawReports": [{"path": str(p.relative_to(root)), "format": "junit", "text": p.read_text()} for p in found],
             "measure": "test cases", "skipped": skipped, "exitCode": code, "assertions": assertions,
-            "status": "pass" if code == 0 and all(a["passed"] for a in assertions) else "fail",
+            "status": "error" if infrastructure else "pass" if code == 0 and all(a["passed"] for a in assertions) else "fail",
             "logTail": tail, "argv": spec["argv"]}
 
 if __name__ == "__main__":

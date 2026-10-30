@@ -93,7 +93,7 @@ test('L2 can consume declared test and scenario results without claiming higher-
       async collect(){events.push('collect');},async cleanup(){events.push('cleanup');return 'removed';}
     });
     const r=await runReview(p,join(f.repo,'runs'),{environmentFactory,reviewer:async(p,packet,checks)=>{events.push('review');assert.equal(checks.at(-1).status,'fail');return clean(p);}});
-    assert.deepEqual(events,['start',spec.kind,'collect','cleanup','review']);
+    assert.deepEqual(events,['start',spec.kind,'review','collect','cleanup']);
     assert.equal(r.run.status,'complete');assert.equal(r.run.assessment,'findings');assert.equal(r.run.usage.sessions,1);
   }
 });

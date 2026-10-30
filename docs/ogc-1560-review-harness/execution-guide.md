@@ -26,3 +26,19 @@ Use `--decisions decisions.json` to designate accepted intent explicitly. Each e
 Pass `--history /previous/run/history.json`. The reviewer reassesses each prior finding as `still-present`, `resolved`, `superseded`, `declined` or `unverified`, retaining original and current evidence. Missing reassessment remains unverified. Evidence is checked against the current source; old report text is not fresh verification. `history.json` is private history, including resolved items; it is not a public comment payload. Nothing is published automatically.
 
 Reviewers can record a consequential approach objection with its problem, reachable path, supported simpler alternative and counterevidence. Suggestions stay separate from actionable defects. These are reviewer judgments; a valid source quotation alone does not prove the conclusion.
+
+## L3: executed tests and test strength
+
+Use `--probes probes.json` with the container executor. A probe declares `id`, `behavior`, `checkId`, `fixedTests`, production `path`, one exact `before`/`after` replacement, `expectedCase` and `expectedFailure`. The executor runs corrected → mutant → restored copies, keeps test source fixed and retains fresh JUnit reports. Assertion failure must match the expected case and diagnostic. Outcomes distinguish detected, survived, uncovered, invalid, setup-error, timeout and explicitly inapplicable probes. A valid removal may supply `inapplicableReason` instead of a mutation. A compile failure is not proof that tests detect the behavior.
+
+The L3 reviewer maps requirements to appropriate test layers, tests, observable assertions and executed check/probe IDs. Scope and gap status are explicit: unrelated behavior does not silently expand a targeted review. Semantic judgments about adequacy remain review judgments; execution and source identity checks cannot prove them automatically.
+
+`examples/java-unit-image` demonstrates a Java 21 executor with the repository's existing JUnit tests. Supply JUnit/Hamcrest jars in its build context; the image contains no repository or credentials. The small launcher records existing tests, without inventing replacement assertions. This example is appropriate for dependency-free units, not framework/persistence integration.
+
+## Requested experiments
+
+`--experiments catalog.json --max-rounds 1` reserves a second reviewer call within the same total review-time allowance. The catalog uses the same check format. The reviewer may request a catalog ID and explain what it would falsify; it cannot supply arbitrary execution commands. The executor runs the check in the isolated environment and supplies the result for reconsideration. Missing authorization, repeated requests and exhausted allowances remain explicit incomplete evidence. Default is zero extra rounds. No automatic model escalation or repair.
+
+## Dependencies and stack sources
+
+`--sources sources.json` attaches only explicitly selected repositories. Each source has a safe `id`, repository identity, absolute local `repo`, full pinned `revision`, role (`dependency`, `consumer`, `stack`) and `required` boolean. Optional `parent` validates stack ancestry; `pinPath` checks the primary candidate's gitlink. Missing required source or mismatched ancestry/pins is a coverage gap, not a code finding. Reviewers inspect these sources read-only and cite repository/revision with `sourceId`. `--history-depth N` explicitly includes needed ancestry; default is the selected revisions only. These checks do not merge or rewrite upstream branches.

@@ -127,3 +127,7 @@ This version uses a fixed authentication smoke, not complete OpenELIS/browser su
 ## Context and isolated commands follow-up
 
 Added explicit accepted-decision provenance, paginated review-thread collection, private re-review history and generic container execution. Regression: 55 passing tests plus skill validation. Real L1 fixture: two passing behavior tests, zero AI calls, image identity recorded, cleanup removed the container. This is implementation and executor evidence; it does not establish higher-level review quality or completion of Stages 2–5. See [execution guide](execution-guide.md).
+
+## Test-strength implementation
+
+Pinned source/stack context, explicit behavior maps, isolated mutation probes, typed JUnit outcomes and a bounded catalog-only experiment loop are implemented. All 62 regression tests pass. The actual OpenELIS BoundedDecimal tests passed, detected a production mutant at the expected assertion and passed restored. A live Sol review exposed schema/scope issues now covered in the protocol; its historical partial result remains partial. See [validation-v05.json](validation-v05.json). Full runtime/product acceptance is still unverified.

@@ -69,3 +69,12 @@ test('reviewer conformance advertises actual capabilities independently of model
   assert.equal(adapter.capabilities.cancellation,true);
   assert.equal(adapter.capabilities.hardCurrencyLimit,false);
 });
+test('strict provider schema accepts optional protocol fields without imposing provider rules on core',async()=>{
+ const {strictSchema,normalizeOptional}=await import('../../review/reviewers/schema.mjs');
+ const {reviewerSchema,validateSchema}=await import('../../review/report.mjs');
+ const wire=strictSchema(reviewerSchema);
+ assert.deepEqual(wire.required,Object.keys(wire.properties));
+ assert.ok(wire.properties.priorFindings.anyOf.some(x=>x.type==='null'));
+ const report=normalizeOptional({...cleanReport(head),priorFindings:null,behaviors:null,requestedChecks:null},reviewerSchema);
+ validateSchema(report,reviewerSchema);assert.equal('priorFindings' in report,false);
+});

@@ -18,10 +18,8 @@ with tempfile.TemporaryDirectory() as d:
  failure='from pathlib import Path;Path("results.xml").write_text(\'<testsuite><testcase name="mismatch"><failure message="expected 2"/></testcase></testsuite>\');raise SystemExit(1)'
  r=run(failure);assert r["status"]=="fail" and not r["assertions"][0]["passed"]
  for cmd in ["pass","raise SystemExit(2)",'from pathlib import Path;Path("results.xml").write_text(\'<testsuite><testcase name="skipped"><skipped/></testcase></testsuite>\')']:
-  try:run(cmd);raise AssertionError("zero tests accepted")
-  except ValueError as e:assert "No executed tests" in str(e)
- try:run("import time;time.sleep(5)",1);raise AssertionError("timeout accepted")
- except ValueError as e:assert "timed out" in str(e)
+  result=run(cmd);assert result["status"]=="error" and result["executed"]==0
+ assert run("import time;time.sleep(5)",1)["outcome"]=="timeout"
  outside=pathlib.Path(d)/"outside.xml";outside.write_text("keep")
  (root/"results.xml").symlink_to(outside)
  try:run(passing);raise AssertionError("escape accepted")

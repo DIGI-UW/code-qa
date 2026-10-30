@@ -1,3 +1,4 @@
+import { validateProbeResult } from './probes.mjs';
 import { identifyFindings, reconcileHistory } from './history.mjs';
 import { decisionGaps } from './decisions.mjs';
 import { ContainerEnvironment } from './environments/container.mjs';
@@ -6,7 +7,7 @@ import { join } from 'node:path';
 import { command, requireSuccess } from './process.mjs';
 import { packetFor, isFresh, captureSourceEvidence } from './snapshot.mjs';
 import { validatePlan, runDirectory } from './plan.mjs';
-import { renderReport, validateReviewer, validateSchema, reviewerSchema, coverageGaps, actionableFindings } from './report.mjs';
+import { renderReport, validateReviewer, validateSchema, reviewerSchema, coverageGaps, verificationGaps, actionableFindings } from './report.mjs';
 import { reviewerAdapter, capabilityGaps } from './reviewers/index.mjs';
 import { isPRFresh } from './github.mjs';
 import { validateCheckResult } from './checks.mjs';
@@ -19,7 +20,7 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
   await mkdir(outputRoot, { recursive: true, mode: 0o700 });
   await mkdir(directory, { mode: 0o700 }); // Never overwrite a prior run/evidence.
   const run = { schemaVersion: 1, harnessVersion: '0.4.0', nodeVersion: process.version, plan, status: 'partial', assessment: 'undetermined', phase: 'prepare',
-    checks: [], reasons: [], cleanup: 'not-needed', usage: { sessions: 0, reported: null }, reviewer: null };
+    checks: [], probes: [], reasons: [], cleanup: 'not-needed', usage: { sessions: 0, reported: null }, reviewer: null };
   const save = async () => {
     await writeFile(join(directory, 'result.json'), JSON.stringify(run, null, 2) + '\n', { mode: 0o600 });
     await writeFile(join(directory, 'report.md'), renderReport(run), { mode: 0o600 });
@@ -27,7 +28,7 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
   const phase = async name => { run.phase = name; onProgress(name); await save(); };
   const failed = error => { run.status = error.kind ?? 'error'; run.reasons.push(error.message); };
   await writeFile(join(directory, 'plan.json'), JSON.stringify(plan, null, 2) + '\n', { mode: 0o600 });
-  let packet;
+  let packet, environment;
   try {
     if (!await isFresh(plan.snapshot) || !await freshness(plan)) { const e = new Error('Base or head changed after planning'); e.kind = 'superseded'; throw e; }
     const unsupported = capabilityGaps(plan);
@@ -43,8 +44,8 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
     if (![0, 2].includes(diff.code) || diff.timedOut || diff.cancelled || diff.overflow || diff.spawnError) requireSuccess(diff, 'Whitespace check');
     run.checks.push({ id: 'whitespace', status: diff.code === 0 ? 'pass' : 'fail', evidence: diff.stdout.trim(), paths: packet.selectedPaths });
     if (plan.environment !== 'none') {
-      const environment = environmentFactory(plan, directory);
-      try {
+      environment = environmentFactory(plan, directory);
+      {
         await phase('environment-start');
         await environment.start(signal);
         await phase('environment-verify');
@@ -56,19 +57,43 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
           const result = validateCheckResult(await environment.runCheck(spec, signal), spec, plan.snapshot.head);
           run.checks.push(result);
         }
-      } finally {
-        run.phase = 'environment-cleanup'; onProgress(run.phase);
-        try { await save(); } catch (error) { run.reasons.push(`State recording: ${error.message}`); }
-        try { await environment.collect(); } catch (error) { run.reasons.push(`Evidence collection: ${error.message}`); }
-        try { run.cleanup = await environment.cleanup(); }
-        catch (error) { run.cleanup = 'failed'; run.reasons.push(`Cleanup: ${error.message}`); }
+        for (const probe of plan.probes ?? []) {
+          await phase('probe-' + probe.id);
+          const result = validateProbeResult(await environment.runProbe(probe, signal), probe, plan.snapshot.head);
+          run.probes.push(result);
+          if (!['detected','inapplicable'].includes(result.outcome)) run.reasons.push('Probe ' + probe.id + ': ' + result.outcome);
+        }
       }
     }
     if (signal?.aborted) { const e = new Error('Run cancelled'); e.kind = 'cancelled'; throw e; }
     if (plan.adapter !== 'none') {
-      await phase('reviewer');
-      run.usage.sessions = 1;
-      const reviewed = await (reviewer ?? reviewerAdapter(plan.adapter).review)(plan, packet, run.checks, directory, signal);
+      let reviewed;
+      const started=Date.now();
+      const requested=new Set();
+      for(let round=0;round<plan.maxSessions;round++) {
+        await phase('reviewer-' + round);
+        const seconds=Math.ceil(plan.reviewSeconds-(Date.now()-started)/1000);
+        if(seconds<1) { const e=new Error('Review time allowance exhausted');e.kind='partial';throw e; }
+        const roundDirectory=round===0 ? directory : join(directory,'round-'+round);
+        if(round) await mkdir(roundDirectory,{mode:0o700});
+        run.usage.sessions++;
+        reviewed = await (reviewer ?? reviewerAdapter(plan.adapter).review)({...plan,reviewSeconds:seconds},
+          {...packet,probes:run.probes,previousAssessment:reviewed?.report ?? null,experimentCatalog:(plan.experiments ?? []).map(c=>({id:c.id,kind:c.kind,argv:c.argv}))},run.checks,roundDirectory,signal);
+        validateSchema(reviewed.report,reviewerSchema);
+        run.usage.rounds ??= [];run.usage.rounds.push(reviewed.usage ?? null);
+        const requests=reviewed.report.requestedChecks ?? [];
+        if(!requests.length) break;
+        if(round+1>=plan.maxSessions) {run.reasons.push('Requested verification exceeds the authorized review rounds');break;}
+        for(const request of requests) {
+          const spec=(plan.experiments ?? []).find(c=>c.id===request.id);
+          if(!spec || !environment || requested.has(spec.id) || !request.reason.trim() || !request.falsifies.trim()) {
+            run.reasons.push('Unavailable or repeated requested experiment: '+request.id);continue;
+          }
+          requested.add(spec.id);
+          await phase('experiment-'+spec.id);
+          run.checks.push(validateCheckResult(await environment.runCheck(spec,signal),spec,plan.snapshot.head));
+        }
+      }
       validateSchema(reviewed.report, reviewerSchema);
       await captureSourceEvidence(reviewed.report, packet);
       await writeFile(join(directory, 'packet.json'), JSON.stringify(packet, null, 2) + '\n', { mode: 0o600 });
@@ -84,17 +109,25 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
       await writeFile(join(directory, 'history.json'), JSON.stringify(run.history, null, 2) + '\n', {mode:0o600});
       run.reasons.push(...run.history.rounds.filter(r => r.head === plan.snapshot.head && r.status === 'unverified').map(r => 'Prior finding unverified: ' + r.id));
       run.reasons.push(...decisionGaps(plan.decisions ?? []), ...(plan.pullRequest?.conversation?.gaps ?? []));
+      await writeFile(join(directory,'packet.json'),JSON.stringify(packet,null,2)+'\n',{mode:0o600});
       run.inspection = reviewed.inspection ?? null;
       run.adapterDiagnostics = reviewed.diagnostics ?? [];
-      run.reasons.push(...coverageGaps(run.reviewer));
+      run.reasons.push(...coverageGaps(run.reviewer),...verificationGaps(run.reviewer,plan,run.checks,run.probes));
       if (run.reviewer.coverage === 'partial' || run.reviewer.omissions.length) run.reasons.push(...run.reviewer.omissions, 'Reviewer coverage is partial');
     }
     if (!await isFresh(plan.snapshot) || !await freshness(plan)) { const e = new Error('Base or head changed during execution; retained as historical evidence'); e.kind = 'superseded'; throw e; }
     if (plan.adapter !== 'none') run.reasons.push(...packet.omissions);
+    run.reasons.push(...run.checks.filter(c=>c.status==='error').map(c=>'Check '+c.id+': '+c.outcome));
     run.status = run.reasons.length || run.cleanup === 'failed' ? 'partial' : 'complete';
     const hasFindings = run.checks.some(c => c.status === 'fail') || Boolean(actionableFindings(run.reviewer).length);
     run.assessment = hasFindings ? 'findings' : run.status === 'complete' ? 'no_findings' : 'undetermined';
   } catch (error) { failed(error); if (run.checks.some(c => c.status === 'fail')) run.assessment = 'findings'; }
+  if(environment) {
+    run.phase='environment-cleanup';onProgress(run.phase);
+    try {await environment.collect();} catch(error) {run.reasons.push('Evidence collection: '+error.message);}
+    try {run.cleanup=await environment.cleanup();} catch(error) {run.cleanup='failed';run.reasons.push('Cleanup: '+error.message);}
+    if(run.status==='complete' && run.reasons.length) {run.status='partial';if(run.assessment==='no_findings')run.assessment='undetermined';}
+  }
   run.phase = 'finished'; run.finishedAt = new Date().toISOString();
   await save();
   return { directory, run };
