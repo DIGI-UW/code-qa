@@ -26,25 +26,42 @@ async function fixture(t) {
   return {repo:dir,base,head:'HEAD'};
 }
 const check={id:'contract',kind:'test',argv:['mvn','test'],reports:['target/surefire-reports/*.xml'],timeoutSeconds:30};
-const clean=async p=>({report:{schemaVersion:1,head:p.snapshot.head,summary:'Selected review complete.',coverage:'complete',omissions:[],findings:[]},usage:{input_tokens:1}});
-test('all levels resolve to distinct work and explicit overrides; Sol ceiling holds',async t=>{
+import { cleanReport } from './fixtures.mjs';
+const clean=async p=>({report:cleanReport(p.snapshot.head),usage:{input_tokens:1}});
+test('level obligations are independent of execution profile and model',async t=>{
   const f=await fixture(t);
-  for(const level of ['L1','L2','L3','L4','L5']){
-    const p=await createPlan({...f,level,...(['L4','L5'].includes(level)?{environment:'openelis',checks:[{...check,kind:level==='L5'?'scenario':'test'}]}:{})});
-    assert.equal(p.level,level);assert.equal(p.maxSessions,level==='L1'?0:1);
-    if(level!=='L1')assert.equal(p.model,'gpt-6.1-sol');
+  const plans = await Promise.all(['L1','L2','L3','L4','L5'].map(level=>createPlan({...f,level})));
+  assert.equal(new Set(plans.map(p=>JSON.stringify(p.requiredEvidence))).size,5);
+  for(const p of plans.slice(1)) {
+    assert.equal(p.reviewSeconds,120);assert.equal(p.reasoningEffort,'low');
+    assert.equal(p.model,'gpt-6.1-sol');
   }
-  const p=await createPlan({...f,level:'L2',reviewSeconds:40});
-  assert.equal(p.reviewSeconds,40);assert.equal(p.maxContextBytes,undefined);
-  assert.deepEqual(p.overrides,{reviewSeconds:40});
-  assert.ok(codexArgs(p,'/work','/schema','/result').includes('model_reasoning_effort="low"'));
-  for(const model of ['gpt-6-astra','made-up-model'])await assert.rejects(createPlan({...f,level:'L2',model}),/Sol\/Luna/);
-  await assert.rejects(createPlan({...f,level:'L1',model:'gpt-6.1-sol'}),/cannot select/);
+  const p=await createPlan({...f,level:'L2',model:'operator-selected-model',reviewSeconds:40});
+  assert.equal(p.model,'operator-selected-model');assert.equal(p.reviewSeconds,40);
+  const argv=codexArgs(p,'/work','/schema','/result');
+  assert.equal(argv[argv.indexOf('--model')+1],p.model);
+  assert.throws(()=>validatePlan({...p,requiredEvidence:[]}),/obligations/);
+  assert.throws(()=>validatePlan({...p,schemaVersion:3}),/Unsupported plan/);
+  await assert.rejects(createPlan({...f,level:'L1',model:'a-model'}),/cannot select/);
   await assert.rejects(createPlan({...f,level:'L7'}),/Unknown level/);
   await assert.rejects(createPlan({...f,level:'L2',rigor:'mechanical'}),/Conflicting/);
-  await assert.rejects(createPlan({...f,level:'L4'}),/verification checks/);
-  await assert.rejects(createPlan({...f,level:'L5',environment:'openelis',checks:[check]}),/scenario/);
+  await assert.rejects(createPlan({...f,level:'L2',profile:'__proto__'}),/Unknown execution/);
+  await assert.rejects(createPlan({...f,level:'L2',adapter:'__proto__'}),/Unknown reviewer/);
   assert.throws(()=>validatePlan({...p,maxSessions:2}),/unsupported/);
+});
+test('a scenario label cannot satisfy higher-level evidence or trigger model spend',async t=>{
+  const f=await fixture(t);
+  for(const level of ['L3','L4','L5']) {
+    const p=await createPlan({...f,level,environment:'openelis',checks:[{...check,kind:'scenario'}]});
+    const r=await runReview(p,join(f.repo,'runs'),{
+      reviewer:()=>{throw Error('must not spend');},
+      environmentFactory:()=>{throw Error('must not start');}
+    });
+    assert.equal(r.run.status,'partial');assert.equal(r.run.assessment,'undetermined');
+    assert.equal(r.run.usage.sessions,0);assert.equal(r.run.cleanup,'not-needed');
+    assert.match(r.run.reasons.join(' '),/test-strength/);
+    if(level==='L5')assert.match(r.run.reasons.join(' '),/product-acceptance/);
+  }
 });
 test('base configuration supplies trusted context hints without copying dependencies',async t=>{
   const f=await fixture(t),p=await createPlan({...f,paths:['consumer.js']});
@@ -65,10 +82,10 @@ test('PR URL parsing and freshness use actual base/head, including a rebase',asy
   assert.equal(await isPRFresh(plan,response({state:'OPEN',headRefOid:'a',baseRefOid:'b'})),true);
   assert.equal(await isPRFresh(plan,response({state:'OPEN',headRefOid:'a',baseRefOid:'c'})),false);
 });
-test('L4 and L5 execute selected checks before one reviewer and always clean up',async t=>{
+test('L2 can consume declared test and scenario results without claiming higher-level acceptance',async t=>{
   const f=await fixture(t);
-  for(const level of ['L4','L5']){
-    const spec={...check,kind:level==='L5'?'scenario':'test'}, p=await createPlan({...f,level,environment:'openelis',checks:[spec]});
+  for(const kind of ['test','scenario']){
+    const spec={...check,kind}, p=await createPlan({...f,level:'L2',environment:'openelis',checks:[spec]});
     const events=[];
     const environmentFactory=()=>({
       async start(){events.push('start');},async verify(){return {id:'login',status:'pass',executed:3};},
@@ -100,8 +117,8 @@ test('one-command local review runs L1 without model access',async t=>{
   assert.equal(saved.plan.level,'L1');assert.equal(saved.usage.sessions,0);
 });
 
-test('L4 executor errors preserve cleanup and prevent model spend or clean clearance', async t => {
-  const f = await fixture(t), p = await createPlan({...f,level:'L4',environment:'openelis',checks:[check]});
+test('Declared check executor errors preserve cleanup and prevent model spend or clean clearance', async t => {
+  const f = await fixture(t), p = await createPlan({...f,level:'L2',environment:'openelis',checks:[check]});
   const events = [];
   const r = await runReview(p,join(f.repo,'runs'),{environmentFactory:()=>({
     async start(){},async verify(){return {id:'login',status:'pass',executed:3};},
@@ -110,4 +127,14 @@ test('L4 executor errors preserve cleanup and prevent model spend or clean clear
   }),reviewer:async()=>{throw Error('must not call');}});
   assert.deepEqual(events,['collect','cleanup']);assert.equal(r.run.cleanup,'removed');
   assert.equal(r.run.status,'error');assert.equal(r.run.assessment,'undetermined');assert.equal(r.run.usage.sessions,0);
+});
+
+test('repository AI defaults do not prevent a zero-credit L1 run',async t=>{
+  const f=await fixture(t),config=join(f.repo,'operator-config.json');
+  await writeFile(config,JSON.stringify({model:'operator-selected-model',adapter:'codex',profile:'development'}));
+  const cli=new URL('../../review/cli.mjs',import.meta.url).pathname;
+  const r=await command([process.execPath,cli,'review','--repo',f.repo,'--base',f.base,'--head',f.head,'--level','L1','--config',config,'--out',join(f.repo,'runs')]);
+  assert.equal(r.code,0,r.stderr);
+  const saved=JSON.parse(await readFile(join(JSON.parse(r.stdout).directory,'result.json'),'utf8'));
+  assert.equal(saved.usage.sessions,0);assert.equal(saved.plan.model,'');assert.equal(saved.plan.adapter,'none');
 });

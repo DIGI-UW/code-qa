@@ -1,12 +1,29 @@
+import { REVIEW_AREAS } from './levels.mjs';
+
 export const reviewerSchema = {
   type: 'object', additionalProperties: false,
   properties: {
-    schemaVersion: { type: 'integer', const: 1 }, head: { type: 'string' }, summary: { type: 'string' },
+    schemaVersion: { type: 'integer', const: 2 }, head: { type: 'string' }, summary: { type: 'string' },
     coverage: { type: 'string', enum: ['complete', 'partial'] }, omissions: { type: 'array', items: { type: 'string' } },
+    assessments: { type: 'array', items: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        area: { type: 'string', enum: REVIEW_AREAS },
+        status: { type: 'string', enum: ['assessed', 'inapplicable', 'unverified'] },
+        reason: { type: 'string' },
+      }, required: ['area', 'status', 'reason'],
+    } },
+    questions: { type: 'array', items: {
+      type: 'object', additionalProperties: false,
+      properties: { question: { type: 'string' }, neededEvidence: { type: 'string' } },
+      required: ['question', 'neededEvidence'],
+    } },
     findings: { type: 'array', items: {
       type: 'object', additionalProperties: false,
       properties: {
         title: { type: 'string' }, consequence: { type: 'string' }, owner: { type: 'string' },
+        disposition: { type: 'string', enum: ['actionable', 'suggestion', 'refuted'] },
+        counterevidence: { type: 'string' }, alternative: { type: 'string' },
         severity: { type: 'string', enum: ['high', 'medium', 'low'] },
         evidence: { type: 'array', minItems: 1, items: {
           type: 'object', additionalProperties: false,
@@ -15,9 +32,9 @@ export const reviewerSchema = {
             checkId: { type: 'string' }, quote: { type: 'string' } },
           required: ['kind', 'path', 'side', 'line', 'checkId', 'quote'],
         } },
-      }, required: ['title', 'consequence', 'owner', 'severity', 'evidence'],
+      }, required: ['title', 'consequence', 'owner', 'severity', 'disposition', 'counterevidence', 'alternative', 'evidence'],
     } },
-  }, required: ['schemaVersion', 'head', 'summary', 'coverage', 'omissions', 'findings'],
+  }, required: ['schemaVersion', 'head', 'summary', 'coverage', 'omissions', 'assessments', 'questions', 'findings'],
 };
 
 // The CLI's schema request is not validation. Reject malformed or incomplete reports locally.
@@ -40,8 +57,15 @@ export function validateReviewer(report, packet, checks) {
   validateSchema(report, reviewerSchema);
   if (report.head !== packet.snapshot.head) throw new Error('Reviewer returned a different head; it will not be overwritten');
   if (!report.summary.trim()) throw new Error('Reviewer summary is empty');
+  const areas = new Set();
+  for (const assessment of report.assessments) {
+    if (areas.has(assessment.area) || !assessment.reason.trim()) throw new Error('Duplicate area or empty coverage rationale');
+    areas.add(assessment.area);
+    if (['intent', 'ownership'].includes(assessment.area) && assessment.status === 'inapplicable') throw new Error('Intent and ownership cannot be inapplicable');
+  }
+  for (const question of report.questions) if (!question.question.trim() || !question.neededEvidence.trim()) throw new Error('Empty unresolved question/evidence request');
   for (const finding of report.findings) {
-    for (const name of ['title', 'consequence', 'owner']) if (!finding[name].trim()) throw new Error(`Empty finding ${name}`);
+    for (const name of ['title', 'consequence', 'owner', 'counterevidence']) if (!finding[name].trim()) throw new Error(`Empty finding ${name}`);
     for (const evidence of finding.evidence) {
       if (!evidence.quote.trim()) throw new Error('Empty evidence quotation');
       if (evidence.kind === 'source') {
@@ -58,16 +82,33 @@ export function validateReviewer(report, packet, checks) {
   }
   return report;
 }
+// Area assessments remain reviewer judgments, not independent factual proof.
+// The runner checks coverage rather than trusting a "complete" label alone.
+export function coverageGaps(report) {
+  const missing = REVIEW_AREAS.filter(area => !report.assessments.some(a => a.area === area));
+  return [
+    ...missing.map(area => 'Missing assessment: ' + area),
+    ...report.assessments.filter(a => a.status === 'unverified').map(a => a.area + ': ' + a.reason),
+    ...report.questions.map(q => q.question + ' Needed evidence: ' + q.neededEvidence),
+  ];
+}
+export const actionableFindings = report => report?.findings.filter(f => f.disposition === 'actionable') ?? [];
+
 export function renderReport(run) {
   const lines = ['# code-qa review', '', `Execution: **${run.status}**. Assessment: **${run.assessment}**.`, '',
-    `Level: **${run.plan.level}**. Preset version: ${run.plan.presetVersion}. Model: ${run.plan.model || 'none'}.`,
+    `Level: **${run.plan.level}**. Evidence contract: ${run.plan.presetVersion}. Execution profile: ${run.plan.profile}. Model: ${run.plan.model || 'none'}.`,
     `Revision: ${run.plan.snapshot.head}`, `Application: ${run.plan.application}${run.plan.question ? ' — ' + run.plan.question : ''}`,
-    `Environment: ${run.plan.environment}. Reviewer: ${run.plan.adapter}.`, '', '## Checks', ''];
+    `Environment: ${run.plan.environment}. Reviewer: ${run.plan.adapter}.`, '', '## Required evidence', '', ...run.plan.requiredEvidence.map(x => '- ' + x), '', '## Checks', ''];
   for (const check of run.checks) lines.push(`- ${check.id}: ${check.status}${check.executed !== undefined ? ` (${check.executed} assertions)` : ''}`);
   if (run.reviewer) {
     lines.push('', '## Reviewer assessment', '', run.reviewer.summary);
+    lines.push('', '## Coverage', '', ...run.reviewer.assessments.map(a => '- ' + a.area + ': ' + a.status + ' — ' + a.reason));
+    if (run.reviewer.questions.length) lines.push('', '## Unresolved questions', '',
+      ...run.reviewer.questions.map(q => '- ' + q.question + ' Needed evidence: ' + q.neededEvidence));
     for (const finding of run.reviewer.findings) {
-      lines.push('', `- **${finding.severity}: ${finding.title}** — ${finding.consequence} Owner: ${finding.owner}.`);
+      lines.push('', `- **${finding.severity} / ${finding.disposition}: ${finding.title}** — ${finding.consequence} Owner: ${finding.owner}.`);
+      lines.push('', 'Counterevidence considered: ' + finding.counterevidence);
+      if (finding.alternative) lines.push('', 'Alternative: ' + finding.alternative);
       for (const evidence of finding.evidence) {
         if (evidence.kind === 'source') {
           const sha = evidence.side === 'head' ? run.plan.snapshot.head : run.plan.snapshot.mergeBase;

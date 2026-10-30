@@ -1,8 +1,7 @@
-# Review runner, version 0.3
+# Review runner, version 0.4
 
 Run a mechanical or Codex review of an existing GitHub PR, or select local committed
-revisions. L4/L5 execute declared tests and scenarios in disposable OpenELIS before
-one reviewer examines the source and execution evidence. Reports stay local.
+revisions. L1 and L2 are executable. Levels L3–L5 have explicit evidence requirements but their verification executors are not implemented yet; requests return partial before startup or AI spend. L1/L2 can still consume declared checks in disposable OpenELIS. Reports stay local.
 
 ## Install and start
 
@@ -45,33 +44,36 @@ of the level. Supplying a question defaults to targeted application.
 
 ## Levels and cost controls
 
-| Level | Executed work | Reviewer seconds | Reasoning |
-| --- | --- | ---: | --- |
-| L1 Mechanical | Snapshot, diff whitespace, optional declared execution; no AI | 0 | n/a |
-| L2 Lightweight | Diff-first source review with on-demand repository inspection | 120 | low |
-| L3 Standard | Broader source review | 300 | medium |
-| L4 Verified | Source review plus at least one declared executable check | 600 | high |
-| L5 Deep | L4 plus at least one declared interaction/scenario check | 900 | high |
+| Level | Evidence obligation | Current execution |
+| --- | --- | --- |
+| L1 Mechanical | Selected deterministic checks; zero AI | Available |
+| L2 Semantic | Intent, ownership, consumers and test adequacy; explicit questions and coverage | Available as reviewer judgments with source/check evidence |
+| L3 Test strength | L2 plus applicable executable test-strength proof | Partial: executor pending |
+| L4 Running integration | L3 plus loaded-candidate identity and integration scenarios | Partial: executors pending |
+| L5 Product acceptance | L4 plus full-stack workflow/design acceptance | Partial: executors pending |
 
-Every AI level permits **one session**, with no automatic retry, additional reviewer
-or model upgrade. Defaults use `gpt-6.1-sol`; the explicit allowlist also permits
-`gpt-6-sol` and `gpt-6-luna`. Astra and unknown model IDs are rejected. Model IDs are
-policy, not a guarantee that an account has access. An unavailable model fails the
-run without fallback.
+A check labeled scenario cannot satisfy higher-level requirements. Plan schema 4
+and evidence-contract version 3 prevent old saved plans from silently acquiring new semantics.
 
-Override `--review-seconds` and `--reasoning-effort` explicitly. There is no source-byte cap; the former `--max-context-bytes` option is removed.
-The preview, plan and report record effective settings and preset version. The reviewer wall-time limit does **not** impose a hard token or currency cap.
-The initial prompt contains scope, requirements, metadata and test evidence;
-the model reads the diff and relevant source through tools during that same session. Reported token usage
-is retained; subscription credits are not converted into dollars. Hard token/currency
-caps and extra sessions are unsupported. Legacy `--rigor mechanical|standard`
-aliases resolve to L1/L3 and conflicting level selections fail.
+Execution defaults are separate: the development profile uses one gpt-6.1-sol session,
+120 seconds and low reasoning. It is the inexpensive default while the harness is
+being developed, not a model ceiling. Use --model MODEL_ID, --review-seconds and
+--reasoning-effort to override supported settings. Only the Codex adapter is currently
+installed; it passes the selected model to Codex, which determines availability.
+An unavailable model fails without fallback. Other adapters remain roadmap work.
 
-L1 is the default. L4/L5 require `--environment openelis` and declared checks;
-login smoke alone cannot satisfy them. Source-only reviews never claim runtime
-verification. Completion means completion of the selected scope, not whole-PR
-clearance. A reviewer that cannot inspect necessary evidence within its session reports partial
-coverage, rather than no findings. Large files are not rejected before review.
+The preview and report show required evidence, capability gaps, execution profile
+and effective settings. Higher levels do not implicitly select stronger models,
+more reasoning or more sessions. There is no source-byte cap. Time limits do not
+enforce tokens or dollars; hard token/currency caps and extra sessions remain
+unsupported. Reported usage is retained without converting subscription credits
+into dollars. L1 is the default; legacy rigor aliases select L1/L3, with L3 now
+reporting its missing evidence capabilities.
+
+A source-only L2 review does not claim runtime acceptance. Missing necessary context,
+unassessed areas or unanswered verification questions yield partial/undetermined.
+The area rationales are model judgments, not independently validated factual proof.
+Large files are not rejected before review.
 
 ## Preview or review local revisions
 
@@ -87,7 +89,7 @@ code-qa review --repo /path/to/repository --base origin/develop --head FEATURE \
 Plans and run directories are created once and never overwritten. Uncommitted
 changes are excluded. Local named refs are checked for movement; explicit SHAs
 intentionally select historical evidence and do not claim current GitHub freshness.
-Version 0.1/0.2 plans must be recreated (plan schema 3, preset version 2); their owned workers can still be cleaned up. Old packet-only plans are not silently upgraded.
+Version 0.1–0.3 plans must be recreated (plan schema 4, evidence-contract version 3); their owned workers can still be cleaned up. Old packet-only plans are not silently upgraded.
 
 ## Context and trusted repository configuration
 
@@ -118,14 +120,14 @@ PR descriptions and changed files are untrusted review data. Example:
 Requirements files also come from the base. Explicit `--requirements FILE` appends
 operator-supplied accepted requirements. Existing tests alone do not establish
 required behavior; obsolete tests may legitimately be removed during refactoring.
-Configuration may additionally supply `environment` and a `checks` array. Never
+Configuration may additionally supply `environment`, a `checks` array, and AI `profile`, `adapter` and `model` settings. Explicit CLI options take precedence. Never
 use configuration from an unreviewed PR as a trusted operator override.
 
 ## Executable checks and scenarios
 
 ```sh
 code-qa review --pr https://github.com/DIGI-UW/OpenELIS-Global-2/pull/NUMBER \
-  --level L5 --environment openelis --checks examples/openelis-checks.json \
+  --level L2 --environment openelis --checks examples/openelis-checks.json \
   --path src/main/java/org/openelisglobal/analyzerimport/service/AnalyzerNormalizedResultContract.java \
   --context src/test/java/org/openelisglobal/analyzerimport/service/AnalyzerNormalizedResultContractTest.java \
   --question 'Does the result contract preserve canonical numeric values?' \
@@ -204,14 +206,14 @@ publish only deliberately selected evidence.
 
 Each run retains `plan.json`, `packet.json`, `result.json`, `report.md` and logs.
 The report shows scope, level, model/limits, executed assertions, evidence-linked
-findings, omissions and cleanup. Source quotes, including those from unchanged files discovered during review, are
+findings, dispositions, counterevidence, area assessments, unanswered questions, omissions and cleanup. Source quotes, including those from unchanged files discovered during review, are
 checked against exact committed lines and retained in `packet.json`. Unread source
 is not represented as reviewed merely because it was available. GitHub check status is a collection-time snapshot, not a replacement for
 live CI.
 
 - Exit 0: requested execution completed, including completed runs **with findings**.
 - Exit 2: partial or error. Exit 3: cancelled or superseded.
-- `no_findings` is allowed only for complete requested coverage.
+- `no_findings` means no actionable findings within complete requested coverage. Suggestions and refuted candidates remain visible, but do not count as actionable defects. Missing assessments or unanswered questions prevent a complete result.
 - Invalid model output, fabricated quotations, missing tests and unavailable
   services remain unverified. Structural evidence validation does not prove the
   model's judgment correct.
@@ -226,8 +228,7 @@ Run `npm test` and `npm run lint` without AI credentials. The
 automated harness tests, real source reviews and isolated OpenELIS execution.
 Claude/other adapters, managed-review import/export, automatic GitHub publication,
 review-thread and stack/dependency collection, dynamic probes and the held-out
-quality evaluation remain later milestones. Local PR collection, freshness and
-L1–L5 execution are implemented in this version.
+quality evaluation remain later milestones. Local PR collection, freshness, L1/L2 execution and higher-level capability-gap reporting are implemented. See the [checklist](ogc-1560-review-harness/roadmap.md) for unfinished Stage 1 work as well as later stages.
 
 Adapter references: [Codex developer commands](https://learn.chatgpt.com/docs/developer-commands),
 [configuration](https://learn.chatgpt.com/docs/config-file/config-reference),

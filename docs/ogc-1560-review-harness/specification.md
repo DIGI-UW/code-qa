@@ -37,7 +37,7 @@ Targeted lenses include correctness, architecture/ownership, simplicity, test qu
 
 ### Parameterized L1–L5 — target evidence contract
 
-Level selects evidence obligations, not model effort. Application, scope/lens, provider/model, execution environment and spend settings are independent. These target levels are pending implementation; existing v0.3 labels describe historical presets and must not be credited as satisfying this contract.
+Level selects evidence obligations, not model effort. Application, scope/lens, provider/model, execution environment and spend settings are independent. Version 0.4 records these obligations and supports L1/L2 coverage reporting. Higher-level verification remains pending and produces explicit partial results before execution. Historical v0.3 labels must not be credited as satisfying this contract.
 
 | Level | Required evidence |
 | --- | --- |
@@ -49,7 +49,7 @@ Level selects evidence obligations, not model effort. Application, scope/lens, p
 
 A targeted review and a full PR review can select any supported level; completion applies only to recorded scope. Missing required evidence is partial/undetermined, never silently downgraded. The standard for a supported finding does not weaken with a lighter level. Necessary focused checks can run at L2; L3 makes applicable test-strength experiments part of its evidence.
 
-**Provider/model policy.** The user's Sol preference applies to inexpensive immature-harness testing, not a permanent product ceiling. Remove the hardcoded allowlist from the generic contract; configure provider/model and supported time/session/spend controls independently. Missing capabilities fail explicitly. No silent paid escalation, fallback or extra reviewers. The current runner still enforces the old allowlist until Stage 1 is implemented.
+**Provider/model policy.** The user's Sol preference applies to inexpensive immature-harness testing, not a permanent product ceiling. Remove the hardcoded allowlist from the generic contract; configure provider/model and supported time/session/spend controls independently. Missing capabilities fail explicitly. No silent paid escalation, fallback or extra reviewers. Version 0.4 removes the old model allowlist and separates the development execution profile; additional adapters and the rest of Stage 1 remain pending.
 
 **Versioning and acceptance.** Version plans and level semantics; preserve old reports as historical evidence, without relabeling them as completed new-level reviews. The [roadmap](roadmap.md) specifies implementation tasks, positive examples, negative controls and exit evidence at every stage. L1 makes zero AI calls. L4/L5 cannot complete on source review or startup/login alone. Approved refactors/removals may pass unchanged tests or delete obsolete ones.
 

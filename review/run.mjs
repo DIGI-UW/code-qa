@@ -3,19 +3,19 @@ import { join } from 'node:path';
 import { command, requireSuccess } from './process.mjs';
 import { packetFor, isFresh, captureSourceEvidence } from './snapshot.mjs';
 import { validatePlan, runDirectory } from './plan.mjs';
-import { renderReport, validateReviewer, validateSchema, reviewerSchema } from './report.mjs';
-import { reviewWithCodex } from './reviewers/codex.mjs';
+import { renderReport, validateReviewer, validateSchema, reviewerSchema, coverageGaps, actionableFindings } from './report.mjs';
+import { reviewerAdapter, capabilityGaps } from './reviewers/index.mjs';
 import { isPRFresh } from './github.mjs';
 import { validateCheckResult } from './checks.mjs';
 import { OpenELISEnvironment } from './environments/openelis.mjs';
 
-export async function runReview(plan, outputRoot, { signal, reviewer = reviewWithCodex,
+export async function runReview(plan, outputRoot, { signal, reviewer,
   environmentFactory = (p, d) => new OpenELISEnvironment(p, d), onProgress = () => {}, freshness = isPRFresh } = {}) {
   validatePlan(plan);
   const directory = runDirectory(outputRoot, plan);
   await mkdir(outputRoot, { recursive: true, mode: 0o700 });
   await mkdir(directory, { mode: 0o700 }); // Never overwrite a prior run/evidence.
-  const run = { schemaVersion: 1, harnessVersion: '0.3.0', nodeVersion: process.version, plan, status: 'partial', assessment: 'undetermined', phase: 'prepare',
+  const run = { schemaVersion: 1, harnessVersion: '0.4.0', nodeVersion: process.version, plan, status: 'partial', assessment: 'undetermined', phase: 'prepare',
     checks: [], reasons: [], cleanup: 'not-needed', usage: { sessions: 0, reported: null }, reviewer: null };
   const save = async () => {
     await writeFile(join(directory, 'result.json'), JSON.stringify(run, null, 2) + '\n', { mode: 0o600 });
@@ -27,6 +27,11 @@ export async function runReview(plan, outputRoot, { signal, reviewer = reviewWit
   let packet;
   try {
     if (!await isFresh(plan.snapshot) || !await freshness(plan)) { const e = new Error('Base or head changed after planning'); e.kind = 'superseded'; throw e; }
+    const unsupported = capabilityGaps(plan);
+    if (unsupported.length) {
+      const error = new Error('Required evidence is not implemented: ' + unsupported.join(', ') + '. No environment or reviewer was started.');
+      error.kind = 'partial'; throw error;
+    }
     packet = await packetFor(plan);
     await writeFile(join(directory, 'packet.json'), JSON.stringify(packet, null, 2) + '\n', { mode: 0o600 });
     await phase('mechanical');
@@ -57,22 +62,23 @@ export async function runReview(plan, outputRoot, { signal, reviewer = reviewWit
       }
     }
     if (signal?.aborted) { const e = new Error('Run cancelled'); e.kind = 'cancelled'; throw e; }
-    if (plan.adapter === 'codex') {
+    if (plan.adapter !== 'none') {
       await phase('reviewer');
       run.usage.sessions = 1;
-      const reviewed = await reviewer(plan, packet, run.checks, directory, signal);
+      const reviewed = await (reviewer ?? reviewerAdapter(plan.adapter).review)(plan, packet, run.checks, directory, signal);
       validateSchema(reviewed.report, reviewerSchema);
       await captureSourceEvidence(reviewed.report, packet);
       await writeFile(join(directory, 'packet.json'), JSON.stringify(packet, null, 2) + '\n', { mode: 0o600 });
       run.reviewer = validateReviewer(reviewed.report, packet, run.checks); run.usage.reported = reviewed.usage;
       run.inspection = reviewed.inspection ?? null;
       run.adapterDiagnostics = reviewed.diagnostics ?? [];
+      run.reasons.push(...coverageGaps(run.reviewer));
       if (run.reviewer.coverage === 'partial' || run.reviewer.omissions.length) run.reasons.push(...run.reviewer.omissions, 'Reviewer coverage is partial');
     }
     if (!await isFresh(plan.snapshot) || !await freshness(plan)) { const e = new Error('Base or head changed during execution; retained as historical evidence'); e.kind = 'superseded'; throw e; }
     if (plan.adapter !== 'none') run.reasons.push(...packet.omissions);
     run.status = run.reasons.length || run.cleanup === 'failed' ? 'partial' : 'complete';
-    const hasFindings = run.checks.some(c => c.status === 'fail') || Boolean(run.reviewer?.findings.length);
+    const hasFindings = run.checks.some(c => c.status === 'fail') || Boolean(actionableFindings(run.reviewer).length);
     run.assessment = hasFindings ? 'findings' : run.status === 'complete' ? 'no_findings' : 'undetermined';
   } catch (error) { failed(error); if (run.checks.some(c => c.status === 'fail')) run.assessment = 'findings'; }
   run.phase = 'finished'; run.finishedAt = new Date().toISOString();

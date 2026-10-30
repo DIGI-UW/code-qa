@@ -33,9 +33,9 @@ async function fixture(t) {
   return { repo, output, dir, base };
 }
 const planFor = (f, extra = {}) => createPlan({ repo: f.repo, base: f.base, head: 'HEAD', ...extra });
-const cleanReport = head => ({ schemaVersion: 1, head, summary: 'Scoped source review completed.', coverage: 'complete', omissions: [], findings: [] });
+import { cleanReport } from './fixtures.mjs';
 const fakeReviewer = async (plan) => ({ report: cleanReport(plan.snapshot.head), usage: { input_tokens: 12, output_tokens: 9 } });
-const ai = { rigor: 'standard', adapter: 'codex', model: 'gpt-6.1-sol', billingMode: 'unknown' };
+const ai = { level: 'L2', adapter: 'codex', model: 'gpt-6.1-sol', billingMode: 'unknown' };
 
 function fakeEnvironment(events, overrides = {}) {
   return () => ({
@@ -124,7 +124,7 @@ test('on-demand caller evidence is validated and retained without trusting dirty
   const plan = await planFor(f, { base, level: 'L2', paths: ['value.js'] });
   await writeFile(join(f.repo, 'caller.js'), 'dirty source must not be reviewed');
   const report = cleanReport(plan.snapshot.head);
-  report.findings.push({ title: 'Caller', consequence: 'Caller mismatch', owner: 'caller', severity: 'low',
+  report.findings.push({ title: 'Caller', consequence: 'Caller mismatch', owner: 'caller', severity: 'low', disposition: 'actionable', counterevidence: 'No contradicting fixture evidence.', alternative: '',
     evidence: [{ kind: 'source', path: 'caller.js', side: 'head', line: 1, checkId: '', quote: 'caller = () => 1' }] });
   const result = await runReview(plan, f.output, { reviewer: async () => ({ report }) });
   assert.equal(result.run.status, 'complete');
@@ -164,7 +164,7 @@ for (const invalid of ['missing', 'stale', 'invented']) {
     const report = cleanReport(plan.snapshot.head);
     if (invalid === 'missing') delete report.findings;
     if (invalid === 'stale') report.head = '0'.repeat(40);
-    if (invalid === 'invented') report.findings.push({ title: 'Invented', consequence: 'Unsupported', owner: 'source', severity: 'high',
+    if (invalid === 'invented') report.findings.push({ title: 'Invented', consequence: 'Unsupported', owner: 'source', severity: 'high', disposition: 'actionable', counterevidence: 'No contradicting fixture evidence.', alternative: '',
       evidence: [{ kind: 'source', path: 'value.js', side: 'head', line: 1, checkId: '', quote: 'not in source' }] });
     const result = await runReview(plan, f.output, { reviewer: async () => ({ report, usage: null }) });
     assert.equal(result.run.status, 'error'); assert.equal(result.run.assessment, 'undetermined');
@@ -173,7 +173,7 @@ for (const invalid of ['missing', 'stale', 'invented']) {
 
 test('actual source evidence is preserved as reviewer judgment', async t => {
   const f = await fixture(t), plan = await planFor(f, ai), report = cleanReport(plan.snapshot.head);
-  report.findings.push({ title: 'Changed value', consequence: 'Callers now receive 2', owner: 'value.js', severity: 'low',
+  report.findings.push({ title: 'Changed value', consequence: 'Callers now receive 2', owner: 'value.js', severity: 'low', disposition: 'actionable', counterevidence: 'No contradicting fixture evidence.', alternative: '',
     evidence: [{ kind: 'source', path: 'value.js', side: 'head', line: 1, checkId: '', quote: 'value = 2' }] });
   const result = await runReview(plan, f.output, { reviewer: async () => ({ report, usage: null }) });
   assert.equal(result.run.status, 'complete'); assert.equal(result.run.assessment, 'findings');
@@ -343,7 +343,7 @@ test('cancellation kills a TERM-ignoring child after its parent closes all pipes
 test('source evidence accepts exact multiline spans and rejects wrong anchors or text', () => {
   const packet = { snapshot: { head: 'abc' }, files: [{ path: 'a.js', side: 'head', text: 'one\n  two\nthree\n' }] };
   const evidence = { kind: 'source', path: 'a.js', side: 'head', line: 2, quote: 'two\nthree', checkId: '' };
-  const report = { ...cleanReport('abc'), findings: [{ title: 'example', consequence: 'example', owner: 'example', severity: 'low', evidence: [evidence] }] };
+  const report = { ...cleanReport('abc'), findings: [{ title: 'example', consequence: 'example', owner: 'example', severity: 'low', disposition: 'actionable', counterevidence: 'No contradicting fixture evidence.', alternative: '', evidence: [evidence] }] };
   assert.equal(validateReviewer(report, packet, []), report);
   evidence.line = 1; assert.throws(() => validateReviewer(report, packet, []), /Source evidence/);
   evidence.line = 2; evidence.quote = 'two\nfour'; assert.throws(() => validateReviewer(report, packet, []), /Source evidence/);
@@ -361,3 +361,36 @@ test('cancellation during log setup does not launch the command', async t => {
   assert.equal(result.cancelled,true);
   await assert.rejects(readFile(marker),{code:'ENOENT'});
 });
+
+for (const [name, change, expected] of [
+  ['missing test assessment', report => { report.assessments = report.assessments.filter(a => a.area !== 'tests'); }, 'partial'],
+  ['unverified consumer', report => { report.assessments.find(a => a.area === 'consumers').status = 'unverified'; }, 'partial'],
+  ['open question', report => { report.questions.push({question:'Which consumer owns formatting?',neededEvidence:'The consumer contract at its pinned revision.'}); }, 'partial'],
+  ['duplicate assessment', report => { report.assessments.push(report.assessments[0]); }, 'error'],
+  ['inapplicable ownership', report => { report.assessments.find(a => a.area === 'ownership').status = 'inapplicable'; }, 'error'],
+]) {
+  test('a complete model label cannot hide ' + name, async t => {
+    const f=await fixture(t),p=await planFor(f,ai),report=cleanReport(p.snapshot.head);
+    change(report);
+    const r=await runReview(p,f.output,{reviewer:async()=>({report})});
+    assert.equal(r.run.status,expected);assert.equal(r.run.assessment,'undetermined');
+    assert.ok(r.run.reasons.length);
+    const saved=await readFile(join(r.directory,'report.md'),'utf8');
+    assert.match(saved,/undetermined/);
+  });
+}
+for (const disposition of ['actionable','suggestion','refuted']) {
+  test('reports retain ' + disposition + ' without conflating it with other dispositions', async t => {
+    const f=await fixture(t),p=await planFor(f,ai),report=cleanReport(p.snapshot.head);
+    report.findings.push({
+      title:'Changed value', consequence:'Caller receives the new value',owner:'value.js',severity:'low',
+      disposition,counterevidence:'The fixture intentionally changes the value.',alternative:'Keep the intended ownership.',
+      evidence:[{kind:'source',path:'value.js',side:'head',line:1,checkId:'',quote:'value = 2'}],
+    });
+    const r=await runReview(p,f.output,{reviewer:async()=>({report})});
+    assert.equal(r.run.status,'complete');
+    assert.equal(r.run.assessment,disposition==='actionable'?'findings':'no_findings');
+    assert.match(await readFile(join(r.directory,'report.md'),'utf8'),new RegExp(disposition));
+    assert.equal(r.run.reviewer.findings.length,1);
+  });
+}

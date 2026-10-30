@@ -11,7 +11,9 @@ import { snapshot, packetFor } from './snapshot.mjs';
 import { prepareContext, trustedConfig, configurationRequirements } from './context.mjs';
 import { LEVELS, resolveLevel } from './levels.mjs';
 
-const help = `code-qa v0.3
+import { capabilityGaps } from './reviewers/index.mjs';
+
+const help = `code-qa v0.4
   levels
   plan   --pr https://github.com/OWNER/REPO/pull/NUMBER --level L1..L5 [options] --out plan.json
   review --pr URL --level L1..L5 [options] [--out /durable/runs]
@@ -23,14 +25,17 @@ Options:
   --application pr|targeted --question TEXT --lens TEXT
   --path PATH (repeatable) --context FILE (repeatable)
   --requirements FILE --config FILE --environment none|openelis
-  --model gpt-6.1-sol --billing-mode subscription|api|unknown
+  --profile development --adapter codex --model MODEL_ID --billing-mode subscription|api|unknown
   --review-seconds N --reasoning-effort low|medium|high
   --startup-seconds N --checks FILE
 Config/check files are explicit trusted operator inputs, not PR instructions.
-L1: no AI. L2: small focused review. L3: broader source review.
-L4: declared tests. L5: declared scenarios. L4/L5 need --environment openelis
-and a checks JSON array (id, kind: test|scenario, argv, reports, timeoutSeconds).
-All AI levels use at most one Sol/Luna session. No automatic retry or model upgrade.
+L1: no AI. L2: semantic review with explicit coverage and questions.
+L3: test-strength proof. L4: running integration. L5: product/design acceptance.
+L3-L5 evidence executors are pending; these runs return partial before AI/startup.
+L1/L2 can run declared checks in OpenELIS (kind: test|scenario, argv, reports,
+timeoutSeconds); those checks do not imply completion of a higher level.
+The development profile uses one inexpensive Sol session; --model overrides it.
+No automatic retry or model upgrade. Provider-specific model availability still applies.
 --config overrides the repository's .code-qa.json read from the base revision.
 Legacy --rigor mechanical|standard aliases map to L1/L3.
 Reports are local; nothing is repaired, posted, pushed or merged.
@@ -43,7 +48,7 @@ try {
     application:{type:'string'}, question:{type:'string'}, purpose:{type:'string'}, requirements:{type:'string'},
     path:{type:'string',multiple:true}, context:{type:'string',multiple:true},
     config:{type:'string'}, checks:{type:'string'}, environment:{type:'string'}, rigor:{type:'string'},
-    adapter:{type:'string'}, model:{type:'string'}, 'billing-mode':{type:'string'}, 'reasoning-effort':{type:'string'},
+    profile:{type:'string'}, adapter:{type:'string'}, model:{type:'string'}, 'billing-mode':{type:'string'}, 'reasoning-effort':{type:'string'},
     'review-seconds':{type:'string'},'startup-seconds':{type:'string'},
   }});
   const action = positionals[0];
@@ -64,12 +69,12 @@ try {
     const requirements = [baseRequirements, v.requirements ? await readFile(v.requirements,'utf8') : ''].filter(Boolean).join('\n\n');
     plan = await createPlan({...source,...neighbors,application:v.application,question:v.question,purpose:v.purpose,
       requirements,paths:v.path,environment:v.environment ?? config.environment,level:v.level,rigor:v.rigor,lens:v.lens,
-      adapter:v.adapter,model:v.model,billingMode:v['billing-mode'],reasoningEffort:v['reasoning-effort'], checks,
+      profile:v.profile ?? config.profile,adapter:v.adapter ?? (resolveLevel(v).level === 'L1' ? undefined : config.adapter),model:v.model ?? (resolveLevel(v).level === 'L1' ? undefined : config.model),billingMode:v['billing-mode'],reasoningEffort:v['reasoning-effort'], checks,
       ...(v['review-seconds'] ? {reviewSeconds:Number(v['review-seconds'])}:{}),
       ...(v['startup-seconds'] ? {startupSeconds:Number(v['startup-seconds'])}:{}),
     });
     const packet = await packetFor(plan);
-    const preview = {level:plan.level,model:plan.model,sessions:plan.maxSessions,reviewSeconds:plan.reviewSeconds,
+    const preview = {level:plan.level,requiredEvidence:plan.requiredEvidence,capabilityGaps:capabilityGaps(plan),profile:plan.profile,model:plan.model,sessions:plan.maxSessions,reviewSeconds:plan.reviewSeconds,
       sourceAccess:packet.sourceAccess,changedFiles:packet.selectedPaths.length,
       contextFiles:plan.contextPaths.length,checks:plan.checks.map(c=>({id:c.id,kind:c.kind,timeoutSeconds:c.timeoutSeconds})),environment:plan.environment,startupSeconds:plan.startupSeconds,omissions:packet.omissions};
     if (action === 'plan') {

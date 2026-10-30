@@ -55,10 +55,9 @@ node install.mjs --target /path/to/host-repo
 ## License
 MIT — see [LICENSE](LICENSE).
 
-## Local review harness (v0.3)
+## Local review harness (v0.4)
 
-**Implementation roadmap:** use the [staged checklist](docs/ogc-1560-review-harness/roadmap.md), with acceptance criteria and negative controls at every stage. Current v0.3 levels below are historical execution presets, not completion of the requested evidence-based L1–L5 method.
-
+**Implementation roadmap:** follow the [staged checklist](docs/ogc-1560-review-harness/roadmap.md). Stage 1 is in progress; the runner now distinguishes required evidence from execution settings.
 
 Run a review of an existing PR:
 
@@ -66,12 +65,14 @@ Run a review of an existing PR:
 node review/cli.mjs review --pr https://github.com/OWNER/REPO/pull/NUMBER --level L1
 ```
 
-Choose L1 for no AI, L2 for one lightweight Sol session, L3 for broader source
-review, L4 for declared executable checks, or L5 for selected scenarios. L4/L5
-run in disposable OpenELIS and require a checks configuration. Levels, application,
-question and lens are independent; no automatic model escalation occurs. AI reviewers
-start with the diff and inspect pinned repository source as needed, without a
-source-byte cap.
+Choose L1 for deterministic checks or L2 for semantic review with explicit intent,
+ownership, consumer and test assessments. L3–L5 require verification capabilities
+that are still pending; they return partial before startup or model spend. Existing
+declared OpenELIS checks remain usable with L1/L2.
+
+The independent development profile defaults to one inexpensive Sol session.
+Override the model explicitly; there is no core Sol/Luna allowlist. Reviewers inspect
+pinned source on demand without a source-byte cap. No automatic model escalation occurs.
 
 The [runner guide](docs/review-runner.md) includes installation, focused reviews,
 limits, repository configuration and executable examples. Run `npm test` for

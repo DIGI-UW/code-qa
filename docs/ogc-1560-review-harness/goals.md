@@ -25,8 +25,8 @@ Captured 22 October 2026, clarified 30 October 2026, from the user's requests in
 
 ## Current scope
 
-The user has authorized implementing, testing and pushing the harness, with OpenELIS as its first isolated environment and one initial AI reviewer. Version 0.3 has useful infrastructure; it does not complete the requested review methods. Follow the [implementation checklist](roadmap.md), including acceptance evidence at every stage. Do not change application behavior, install enforcement hooks, merge PRs or infer review reliability from smoke tests.
+The user has authorized implementing, testing and pushing the harness, with OpenELIS as its first isolated environment and one initial AI reviewer. Version 0.4 delivers the first Stage 1 contract/report changes; the stage remains in progress and the broader review methods are unfinished. Follow the [implementation checklist](roadmap.md), including acceptance evidence at every stage. Do not change application behavior, install enforcement hooks, merge PRs or infer review reliability from smoke tests.
 
 ## Decisions still open
 
-L1–L5 evidence obligations and provider independence are requirements. Exact adapter-specific limits, source-data policy, maintainer ownership, retention and evaluation thresholds still need implementation validation. Configure them transparently without silently removing a goal. The current model allowlist is an implementation limitation to remove, not a user requirement.
+L1–L5 evidence obligations and provider independence are requirements. Exact adapter-specific limits, source-data policy, maintainer ownership, retention and evaluation thresholds still need implementation validation. Configure them transparently without silently removing a goal. The old core model allowlist has been removed; inexpensive development defaults remain independent of review level.

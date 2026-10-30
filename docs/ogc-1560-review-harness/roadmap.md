@@ -2,7 +2,7 @@
 
 Updated 30 October 2026. This is the implementation roadmap following the requirements audit of code-qa v0.3 at `853a24d557cc451bce89ca8743fcf52a807de6fb`.
 
-**Status: all stages below are pending.** Existing runner tests and historical reviews do not satisfy these acceptance criteria. The audit is complete; the remediation is not implemented.
+**Status: Stage 1 is in progress; Stages 2–5 are pending.** Version 0.4 delivers the evidence contract and initial report/model-policy changes. Only checked items below are complete. See [validation-v04.json](validation-v04.json); this is not full-stage or review-quality acceptance.
 
 This checklist supersedes the earlier milestone sequence and the interpretation of L1–L5 as effort presets. See the [specification](specification.md), [goals](goals.md), [historical implementation evidence](implementation-status.md), and [20-gap audit](gap-inventory.json). Gap IDs below are stable links to that audit.
 
@@ -36,8 +36,8 @@ Scope is independent of level. L1 may execute existing deterministic probes; L2 
 
 ### G01 — Levels must describe evidence, not duration
 
-- [ ] Replace time-based level completion with versioned evidence requirements and capability validation.
-- [ ] **Acceptance:** Version the level contract and validate its required evidence. A unit test relabeled scenario cannot complete L5. Missing required evidence yields partial/undetermined, not a silently downgraded or fully completed review. Preserve independent scope, model, execution and spending settings.
+- [x] Replace time-based level completion with versioned evidence requirements and capability validation.
+- [x] **Acceptance:** Version the level contract and validate its required evidence. A unit test relabeled scenario cannot complete L5. Missing required evidence yields partial/undetermined, not a silently downgraded or fully completed review. Preserve independent scope, model, execution and spending settings.
 
 ### G02 — Recover intent, decisions and changed expectations
 
@@ -56,12 +56,12 @@ Scope is independent of level. L1 may execute existing deterministic probes; L2 
 
 ### G14 — Report coverage, questions and dispositions honestly
 
-- [ ] Extend reports with evidence obligations, coverage, questions, counterevidence and dispositions.
-- [ ] **Acceptance:** Retain execution status separately from assessment. Record assessed behaviors/dimensions, evidence type, unresolved questions, supported/refuted findings and action/disposition independent of severity. Never promote missing evidence to no findings or treat a quotation check as proof of correctness. Completion must be checked against the selected level's evidence obligations.
+- [x] Extend reports with evidence obligations, coverage, questions, counterevidence and dispositions.
+- [x] **Acceptance:** Retain execution status separately from assessment. Record assessed behaviors/dimensions, evidence type, unresolved questions, supported/refuted findings and action/disposition independent of severity. Never promote missing evidence to no findings or treat a quotation check as proof of correctness. Completion must be checked against the selected level's evidence obligations.
 
 ### G15 — Provider independence and separate development cost policy
 
-- [ ] Remove the core Sol/Luna gate; define reviewer capabilities and an independent inexpensive development profile.
+- [x] Remove the core Sol/Luna gate; define reviewer capabilities and an independent inexpensive development profile.
 - [ ] **Acceptance:** Separate review level, scope/lens, environment, provider/model and execution/spend policy. Keep cheap Sol settings in a development profile. Adapters declare actual source/image/check-request/structured-output/cancellation/usage capabilities and fail clearly when required capabilities are absent. Verify the interface with fake-adapter conformance in this stage. A second real adapter must pass conformance in Stage 4 before claiming portability; it is not a Stage 1 prerequisite. Do not promise currency/token enforcement a provider cannot offer.
 
 ### G16 — Make mechanical checks and environments repository-owned
@@ -73,6 +73,10 @@ Scope is independent of level. L1 may execute existing deterministic probes; L2 
 
 - [ ] Replace obsolete level/model tests and align specification, CLI help, examples and skill entry points.
 - [ ] **Acceptance:** Replace obsolete level/model-policy expectations while keeping reliability protections. Align CLI help, examples, spec, status and skill entry points with one contract. Each delivery demonstrates a real capability and its negative control. Label historical L4/L5 runs by the old preset version and actual evidence; do not retroactively claim new-level acceptance.
+
+**First slice evidence:** v0.4 executes L1/L2, rejects unsupported higher-level claims before spend/startup, separates model settings from levels, and reports coverage/questions/dispositions. One low-effort Sol fixture review honored the approved obsolete-test deletion; its report explicitly did not claim tests ran. The fixture's two behavior tests were run separately. The test-quality skill is now loaded, but the structured behavior-to-test map and probe executor remain Stage 2 work.
+
+**Still needed in Stage 1:** automatic decision/conversation collection (G02), stable re-review identity/history (G03), fuller approach/alternative verification (G04), adapter conformance completion (G15), generic repository execution (G16), and complete example/skill migration (G20).
 
 ### Stage 1 exit
 

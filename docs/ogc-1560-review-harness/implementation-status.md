@@ -1,10 +1,16 @@
 # Implementation and validation
 
+## Version 0.4 — 30 October 2026: Stage 1 in progress
+
+The first implementation slice separates evidence obligations from execution settings. L1/L2 remain usable; L3–L5 return explicit partial results before startup or AI spend because their required verification executors are pending. Reports now preserve coverage, unanswered questions, counterevidence and actionable/suggestion/refuted dispositions. The core model allowlist is removed; a development profile keeps default testing inexpensive. The test-quality procedure is loaded by the reviewer.
+
+The [checklist](roadmap.md) records completed items and remaining Stage 1 work. [Validation evidence](validation-v04.json) includes a bounded live Sol review of an approved-removal fixture, its source patch and two separately executed behavior tests. It is not a quality benchmark or full-stage completion. Plans use schema 4/evidence contract 3; reviewer output uses schema 2. Recreate old plans instead of silently upgrading them.
+
 ## Audit correction — 30 October 2026
 
-The [implementation checklist](roadmap.md) is the current roadmap; all five remediation stages are pending. The [20-gap inventory](gap-inventory.json) records the source-backed audit.
+The [implementation checklist](roadmap.md) is the current roadmap. At the audited v0.3 revision all five remediation stages were pending; progress is recorded above and in that checklist. The [20-gap inventory](gap-inventory.json) records the source-backed audit.
 
-The entries below describe historical runner capabilities. Their L4/L5 labels refer to the old presets, not verified completion of the new evidence-based levels. In particular, executed JUnit/scenario checks do not establish test adequacy, mutation proof or full-stack/design acceptance. The Sol/Luna restriction remains in code but is no longer intended product policy. Existing tests validate runner behavior, not review quality.
+The entries below describe historical runner capabilities. Their L4/L5 labels refer to the old presets, not verified completion of the new evidence-based levels. In particular, executed JUnit/scenario checks do not establish test adequacy, mutation proof or full-stack/design acceptance. The Sol/Luna restriction was present in the audited v0.3 code but was no longer intended product policy. Existing tests validate runner behavior, not review quality.
 
 
 ## Version 0.3 — 29 October 2026
