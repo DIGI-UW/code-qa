@@ -37,6 +37,10 @@ export const reviewerSchema = {
   }, required: ['schemaVersion', 'head', 'summary', 'coverage', 'omissions', 'assessments', 'questions', 'findings'],
 };
 
+reviewerSchema.properties.findings.items.properties.ownerSourceId = {type:'string'};
+reviewerSchema.properties.findings.items.properties.existingThreadId = {type:'string'};
+reviewerSchema.properties.stackCoverage = {type:'array',items:{type:'object',additionalProperties:false,properties:{id:{type:'string'},status:{type:'string',enum:['assessed','unverified']},reason:{type:'string'}},required:['id','status','reason']}};
+
 const evidenceSchema = reviewerSchema.properties.findings.items.properties.evidence;
 reviewerSchema.properties.priorFindings = { type: 'array', items: {
   type: 'object', additionalProperties: false,
@@ -102,6 +106,12 @@ export function validateReviewer(report, packet, checks) {
   }
   for (const question of report.questions) if (!question.question.trim() || !question.neededEvidence.trim()) throw new Error('Empty unresolved question/evidence request');
   for (const finding of report.findings) {
+    if (packet.stack && finding.disposition === 'actionable' && !packet.sources.some(s => s.id === finding.ownerSourceId && !s.id.startsWith('previous-') && s.available)) throw new Error('Stack finding needs a current owning source ID');
+    if (finding.existingThreadId) {
+      const owner = packet.stack?.layers.find(l => l.id === finding.ownerSourceId);
+      const threads = (packet.stack ? owner?.pullRequest.conversation : packet.pullRequest?.conversation)?.threads ?? [];
+      if (!threads.some(t => t.id === finding.existingThreadId)) throw new Error('Finding refers to an unknown owning-PR review thread');
+    }
     if (finding.approach && Object.values(finding.approach).some(v => !v.trim())) throw new Error('Approach objection needs problem, reachable path and supported alternative');
     for (const name of ['title', 'consequence', 'owner', 'counterevidence']) if (!finding[name].trim()) throw new Error(`Empty finding ${name}`);
     for (const evidence of finding.evidence) {
@@ -143,7 +153,9 @@ export function renderReport(run) {
   if(run.runtimeAssessment) lines.push('', '## Loaded runtime', '', run.runtimeAssessment.status, ...run.runtimeAssessment.reasons.map(r=>'- '+r));
   if(run.artifacts?.length) lines.push('', '## Retained evidence', '', ...run.artifacts.map(a=>'- '+a.id+' ('+a.kind+'): '+a.path));
   if(run.acceptance) lines.push('', '## Product acceptance', '', ...run.acceptance.deviations.map(d=>'- Deviation: '+d),...run.acceptance.gaps.map(g=>'- Unverified: '+g),...(run.acceptance.referenceNotes??[]).map(n=>'- Reference: '+n));
+  if (run.plan.stack) lines.push('', '## Native gh stack', '', `Selection: ${run.plan.stack.selection}. Trunk: ${run.plan.stack.trunk}.`, ...run.plan.stack.layers.map(l => `- [${l.id}](${l.pullRequest.url}): ${l.base} → ${l.head}${l.base !== l.mergeBase ? ' (needs restacking)' : ''}`), '', 'Checks executed by this run apply only to the selected candidate. Combined tests do not prove every intermediate layer works.');
   if (run.reviewer) {
+    if(run.reviewer.stackCoverage) lines.push('', '## Stack review coverage', '', ...run.reviewer.stackCoverage.map(c => `- ${c.id}: ${c.status} — ${c.reason}`));
     for(const workflow of run.reviewer.acceptance??[]) lines.push('', '### Workflow: '+workflow.id+' — '+workflow.status, '',
       workflow.reason, '', 'Observed: '+workflow.observedOutcome, '', 'Saved state: '+workflow.persistedOutcome,
       '', 'Design comparison ('+(workflow.designId||'inapplicable')+'): '+workflow.designComparison,
@@ -155,14 +167,19 @@ export function renderReport(run) {
       ...run.reviewer.questions.map(q => '- ' + q.question + ' Needed evidence: ' + q.neededEvidence));
     for (const finding of run.reviewer.findings) {
       lines.push('', `- **${finding.severity} / ${finding.disposition}: ${finding.title}** — ${finding.consequence} Owner: ${finding.owner}.`);
+      if (finding.ownerSourceId) {
+        const owner = run.plan.stack?.layers.find(l => l.id === finding.ownerSourceId);
+        lines.push('', 'Owning source: ' + (owner ? `[${owner.id}](${owner.pullRequest.url})` : finding.ownerSourceId));
+      }
       lines.push('', 'Counterevidence considered: ' + finding.counterevidence);
       if (finding.alternative) lines.push('', 'Alternative: ' + finding.alternative);
       for (const evidence of finding.evidence) {
         if (evidence.kind === 'source') {
-          const attached=evidence.sourceId ? run.plan.sources?.find(s=>s.id===evidence.sourceId) : null;
-          const sha = attached?.revision ?? (evidence.side === 'head' ? run.plan.snapshot.head : run.plan.snapshot.mergeBase);
+          const attached=evidence.sourceId ? (run.sources ?? run.plan.sources)?.find(s=>s.id===evidence.sourceId) : null;
+          const sha = attached ? (evidence.side === 'head' ? attached.revision : attached.mergeBase ?? attached.parent ?? attached.revision) : (evidence.side === 'head' ? run.plan.snapshot.head : run.plan.snapshot.mergeBase);
           const path = evidence.path.split('/').map(encodeURIComponent).join('/');
-          const url = run.plan.pullRequest ? `https://github.com/${attached?.repository ?? run.plan.pullRequest.repository}/blob/${sha}/${path}#L${evidence.line}` : null;
+          const repository = attached?.repository ?? run.plan.stack?.repository ?? run.plan.pullRequest?.repository;
+          const url = repository ? `https://github.com/${repository}/blob/${sha}/${path}#L${evidence.line}` : null;
           const label = `${attached?.repository ?? evidence.side}@${sha}:${evidence.path}:${evidence.line}`;
           lines.push('', url ? `[${label}](${url})` : label, '', ...evidence.quote.split('\n').map(line => '> ' + line));
         } else lines.push('', `Check: ${evidence.checkId}`, '', '> ' + evidence.quote);

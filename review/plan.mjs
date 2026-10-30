@@ -1,3 +1,4 @@
+import {validateStack, stackSources} from './stack.mjs';
 import {readFile} from 'node:fs/promises';
 import {digest} from './artifacts.mjs';
 import {validateScenarios,validateWorkflows} from './acceptance.mjs';
@@ -21,7 +22,7 @@ export function validatePlan(plan) {
   if (!Object.hasOwn(LEVELS, plan.level) || plan.presetVersion !== PRESET_VERSION) throw new Error('Unknown level/preset');
   if (!Object.hasOwn(PROFILES, plan.profile)) throw new Error('Unknown execution profile');
   if (JSON.stringify(plan.requiredEvidence) !== JSON.stringify(LEVELS[plan.level].evidence)) throw new Error('Level evidence obligations changed; create a new plan');
-  if (!['pr', 'targeted'].includes(plan.application) || (plan.application === 'targeted' && !plan.question?.trim())) throw new Error('Targeted review needs a question');
+  if (!['pr', 'targeted', 'stack'].includes(plan.application) || (plan.application === 'targeted' && !plan.question?.trim())) throw new Error('Targeted review needs a question');
   if (!['mechanical', 'standard'].includes(plan.rigor)) throw new Error('Unknown rigor; use --level L1..L5');
   if (plan.rigor !== (plan.level === 'L1' ? 'mechanical' : 'standard')) throw new Error('Mechanical and AI level mismatch');
   if (!['none', 'openelis', 'container'].includes(plan.environment)) throw new Error('Unknown environment');
@@ -42,6 +43,16 @@ export function validatePlan(plan) {
   validateScenarios(plan.scenarios ?? [],plan.checks);
   validateWorkflows(plan.workflows ?? [],plan.checks,plan.designs ?? []);
   validateSources(plan.sources ?? []);
+  if (plan.application === 'stack' || plan.stack) {
+    validateStack(plan.stack);
+    if (plan.application !== 'stack') throw new Error('Native stack requires stack application');
+    const selected = plan.stack.layers.find(l => l.id === plan.stack.selection);
+    if (plan.snapshot.base !== (selected?.base ?? plan.stack.layers[0].base) || plan.snapshot.head !== (selected?.head ?? plan.stack.layers.at(-1).head)) throw new Error('Stack candidate does not match plan');
+    for(const source of stackSources(plan.stack, plan.snapshot.repo)) {
+      const actual = plan.sources.find(s => s.id === source.id);
+      if (!actual || actual.repo !== source.repo || actual.revision !== source.revision || actual.base !== source.base || actual.mergeBase !== source.mergeBase || actual.required !== true) throw new Error('Stack source range missing or changed');
+    }
+  }
   integer(plan.historyDepth ?? 1,'historyDepth',1,1000);
   validateDecisions(plan.decisions ?? []);
   validateHistory(plan.history ?? null);
@@ -74,7 +85,7 @@ export async function createPlan(options) {
     rigor: ai ? 'standard' : 'mechanical', adapter: options.adapter ?? (ai ? 'codex' : 'none'), environment: options.environment ?? 'none',
     model: options.model ?? (ai ? defaults.model : ''), billingMode: options.billingMode ?? 'unknown', maxSessions: ai ? 1 + (options.maxRounds ?? 0) : 0, maxRounds: options.maxRounds ?? 0,
     reviewSeconds: options.reviewSeconds ?? (ai ? defaults.reviewSeconds : 0), startupSeconds: options.startupSeconds ?? 3600,
-    scenarios:options.scenarios ?? [],workflows:options.workflows ?? [],designs:await Promise.all((options.designs ?? []).map(async d=>({...d,sha256:digest(await readFile(d.file))}))), runtimeCheckId:options.runtimeCheckId ?? '', sources:options.sources ?? [],historyDepth:options.historyDepth ?? 1, checks: options.checks ?? [], probes: options.probes ?? [], experiments:options.experiments ?? [], image: options.image ?? 'node:22-bookworm',
+    scenarios:options.scenarios ?? [],workflows:options.workflows ?? [],designs:await Promise.all((options.designs ?? []).map(async d=>({...d,sha256:digest(await readFile(d.file))}))), runtimeCheckId:options.runtimeCheckId ?? '', stack:options.stack ?? null, sources:[...stackSources(options.stack, resolve(options.repo)), ...(options.sources ?? [])],historyDepth:options.historyDepth ?? 1, checks: options.checks ?? [], probes: options.probes ?? [], experiments:options.experiments ?? [], image: options.image ?? 'node:22-bookworm',
     decisions: options.decisions ?? [], history: options.history ?? null,
     contextNotes: options.contextNotes ?? [], pullRequest: options.pullRequest ?? null,
     overrides: Object.fromEntries(['model','reviewSeconds','startupSeconds','reasoningEffort']

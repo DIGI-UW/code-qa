@@ -1,3 +1,4 @@
+import {stackCoverageGaps} from './stack.mjs';
 import {assessRuntime,assessScenarios} from './runtime.mjs';
 import {assessAcceptance} from './acceptance.mjs';
 import {persistArtifacts,captureDesigns} from './artifacts.mjs';
@@ -22,7 +23,7 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
   const directory = runDirectory(outputRoot, plan);
   await mkdir(outputRoot, { recursive: true, mode: 0o700 });
   await mkdir(directory, { mode: 0o700 }); // Never overwrite a prior run/evidence.
-  const run = { schemaVersion: 1, harnessVersion: '0.5.0', nodeVersion: process.version, plan, status: 'partial', assessment: 'undetermined', phase: 'prepare',
+  const run = { schemaVersion: 1, harnessVersion: '0.6.0', nodeVersion: process.version, plan, status: 'partial', assessment: 'undetermined', phase: 'prepare',
     checks: [], probes: [], artifacts:[], designs:[], reasons: [], cleanup: 'not-needed', usage: { sessions: 0, reported: null }, reviewer: null };
   const save = async () => {
     await writeFile(join(directory, 'result.json'), JSON.stringify(run, null, 2) + '\n', { mode: 0o600 });
@@ -40,6 +41,7 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
       error.kind = 'partial'; throw error;
     }
     packet = await packetFor(plan);
+    run.sources = packet.sources;
     run.designs=await captureDesigns(plan.designs ?? [],directory);
     await writeFile(join(directory, 'packet.json'), JSON.stringify(packet, null, 2) + '\n', { mode: 0o600 });
     await phase('mechanical');
@@ -47,6 +49,11 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
       plan.snapshot.mergeBase, plan.snapshot.head, '--', ...packet.selectedPaths], { signal, log: join(directory, 'whitespace.log') });
     if (![0, 2].includes(diff.code) || diff.timedOut || diff.cancelled || diff.overflow || diff.spawnError) requireSuccess(diff, 'Whitespace check');
     run.checks.push({ id: 'whitespace', status: diff.code === 0 ? 'pass' : 'fail', evidence: diff.stdout.trim(), paths: packet.selectedPaths });
+    if (plan.stack?.selection === 'combined') for (const layer of plan.stack.layers) {
+      const result = await command(['git', '--no-pager', '--literal-pathspecs', '-C', plan.snapshot.repo, 'diff', '--no-ext-diff', '--no-textconv', '--check', layer.mergeBase, layer.head, '--'], {signal, log: join(directory, layer.id + '-whitespace.log')});
+      if (![0,2].includes(result.code) || result.timedOut || result.cancelled || result.overflow || result.spawnError) requireSuccess(result, 'Layer whitespace check');
+      run.checks.push({id: layer.id + '-whitespace', status: result.code === 0 ? 'pass' : 'fail', evidence: result.stdout.trim(), sourceId: layer.id, head: layer.head});
+    }
     if (plan.environment !== 'none') {
       environment = environmentFactory(plan, directory);
       {
@@ -119,21 +126,21 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
         validateReviewer(evidenceReport, packet, run.checks);
       }
       run.reviewer = validateReviewer(reviewed.report, packet, run.checks); run.usage.reported = Object.fromEntries([...new Set(run.usage.rounds.flatMap(r=>Object.keys(r??{})))].filter(k=>run.usage.rounds.every(r=>typeof r?.[k]==='number')).map(k=>[k,run.usage.rounds.reduce((sum,r)=>sum+r[k],0)]));
-      const repository = plan.pullRequest?.repository ?? plan.snapshot.repo;
+      const repository = plan.stack?.repository ?? plan.pullRequest?.repository ?? plan.snapshot.repo;
       run.findings = identifyFindings(run.reviewer, repository, plan.snapshot.head);
       run.history = reconcileHistory(plan.history, run.reviewer, run.findings, repository, plan.snapshot.head);
       await writeFile(join(directory, 'history.json'), JSON.stringify(run.history, null, 2) + '\n', {mode:0o600});
       run.reasons.push(...run.history.rounds.filter(r => r.head === plan.snapshot.head && r.status === 'unverified').map(r => 'Prior finding unverified: ' + r.id));
-      run.reasons.push(...decisionGaps(plan.decisions ?? []), ...(plan.pullRequest?.conversation?.gaps ?? []));
+      run.reasons.push(...decisionGaps(plan.decisions ?? []), ...(plan.pullRequest?.conversation?.gaps ?? []), ...(plan.stack?.layers.flatMap(l => l.pullRequest.conversation?.gaps ?? []) ?? []));
       await writeFile(join(directory,'packet.json'),JSON.stringify(packet,null,2)+'\n',{mode:0o600});
       if(plan.requiredEvidence.includes('product-acceptance')) {run.acceptance=assessAcceptance(plan.workflows,run.reviewer,run.checks,run.artifacts,run.designs);run.reasons.push(...run.acceptance.gaps);}
       run.inspection = reviewed.inspection ?? null;
       run.adapterDiagnostics = reviewed.diagnostics ?? [];
-      run.reasons.push(...coverageGaps(run.reviewer),...verificationGaps(run.reviewer,plan,run.checks,run.probes));
+      run.reasons.push(...stackCoverageGaps(run.reviewer, plan.stack),...coverageGaps(run.reviewer),...verificationGaps(run.reviewer,plan,run.checks,run.probes));
       if (run.reviewer.coverage === 'partial' || run.reviewer.omissions.length) run.reasons.push(...run.reviewer.omissions, 'Reviewer coverage is partial');
     }
     if (!await isFresh(plan.snapshot) || !await freshness(plan)) { const e = new Error('Base or head changed during execution; retained as historical evidence'); e.kind = 'superseded'; throw e; }
-    if (plan.adapter !== 'none') run.reasons.push(...packet.omissions);
+    run.reasons.push(...packet.omissions);
     run.reasons.push(...run.checks.filter(c=>c.status==='error').map(c=>'Check '+c.id+': '+c.outcome));
     run.status = run.reasons.length || run.cleanup === 'failed' ? 'partial' : 'complete';
     const hasFindings = Boolean(run.acceptance?.deviations.length) || run.runtimeAssessment?.status==='fail' || run.checks.some(c => c.status === 'fail') || Boolean(actionableFindings(run.reviewer).length);

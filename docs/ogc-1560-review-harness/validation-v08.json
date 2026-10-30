@@ -1,0 +1,85 @@
+{
+  "date": "2026-10-30",
+  "version": "0.6.0",
+  "scope": "Native gh stack coordination; not full security clearance or independently measured reviewer quality",
+  "automated": {
+    "suite": "npm test",
+    "tests": 91,
+    "failed": 0,
+    "modelCalls": 0,
+    "skillLint": "7 skills valid"
+  },
+  "nativeStack": {
+    "repository": "DIGI-UW/OpenELIS-Global-2",
+    "prs": [
+      4851,
+      4854,
+      4875,
+      4890
+    ],
+    "candidate": "b12b213b6f2a4e4db930d5e704d961349e4cc5a5",
+    "level": "L1",
+    "status": "complete",
+    "assessment": "no_findings",
+    "checks": [
+      {
+        "id": "whitespace",
+        "status": "pass"
+      },
+      {
+        "id": "pr-4851-whitespace",
+        "status": "pass"
+      },
+      {
+        "id": "pr-4854-whitespace",
+        "status": "pass"
+      },
+      {
+        "id": "pr-4875-whitespace",
+        "status": "pass"
+      },
+      {
+        "id": "pr-4890-whitespace",
+        "status": "pass"
+      }
+    ],
+    "modelCalls": 0
+  },
+  "reviewerSmoke": {
+    "selection": "pr-4875",
+    "head": "ee7fb0efad3a9128258997ea82e07ded6ee37934",
+    "level": "L2",
+    "model": "gpt-6.1-sol",
+    "reasoning": "low",
+    "sessionLimit": 1,
+    "seconds": 120,
+    "firstAttempt": "Rejected because the model used a GitHub comment ID as harness history. Schema and instructions now restrict priorFindings to supplied history.",
+    "retry": {
+      "status": "complete",
+      "assessment": "findings",
+      "inspections": 19,
+      "coverage": [
+        {
+          "id": "design",
+          "status": "assessed",
+          "reason": "Selected-layer design preserves configuration metadata in shared cleanup and gives barcode fixtures transactional ownership without changing production responsibilities."
+        },
+        {
+          "id": "pr-4875",
+          "status": "assessed",
+          "reason": "Reviewed all three changed files and relevant unchanged configuration callers, controller behavior, and fixture-loading implementation. Other stack layers are outside this selected-layer review."
+        }
+      ],
+      "findings": 1
+    },
+    "adjudication": "Returned an existing low-priority fixture-style concern. Not treated as a new verified security defect. Nothing published.",
+    "followup": "Added existing-thread identity and no-duplicate-publication regression coverage after this smoke; that final clarification is unit-tested, not another paid review."
+  },
+  "notEstablished": [
+    "Full security-stack acceptance",
+    "Intermediate runtime acceptance beyond supplied synthetic regression",
+    "Held-out independent reviewer quality"
+  ],
+  "applicationChanges": false,
+  "merged": false
+}

@@ -208,3 +208,7 @@ The implemented CLI includes Codex/Claude adapters, external-result import, expl
 Adapter references: [Codex developer commands](https://learn.chatgpt.com/docs/developer-commands),
 [configuration](https://learn.chatgpt.com/docs/config-file/config-reference),
 and [Lima configuration](https://lima-vm.io/docs/config/).
+
+## Native gh stacks
+
+Use `plan/review --stack --repo CHECKOUT` for first-class stack collection, layer and combined diff inspection, explicit coverage, and owning-PR findings. `--stack-layer NUMBER` selects an intermediate candidate; `--previous-stack PLAN` adds the previous ranges and parent comparisons. See [the native stack guide](stack-review.md). The hosted workflow remains single-PR.

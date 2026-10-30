@@ -4,7 +4,7 @@ import { SHA } from './snapshot.mjs';
 // IDs are private report identities, never application acceptance gates.
 export function identifyFindings(report, repository, head) {
   return report.findings.map(f => ({ ...f, id: createHash('sha256').update(JSON.stringify([
-    repository, f.owner, f.title, f.evidence.map(e => [e.kind, e.sourceId ?? "", e.path, e.checkId]),
+    repository, f.owner, ...(f.ownerSourceId ? [f.ownerSourceId] : []), f.title, f.evidence.map(e => [e.kind, e.sourceId ?? "", e.path, e.checkId]),
   ])).digest('hex').slice(0, 24), originalHead: head }));
 }
 export function validateHistory(history) {

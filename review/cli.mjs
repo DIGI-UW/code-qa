@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import {collectStack, validateStack} from './stack.mjs';
 import {discoverOpenELISDesigns} from './design-discovery.mjs';
 import {importReport,publication} from './exchange.mjs';
 import { parseArgs } from 'node:util';
@@ -10,12 +11,12 @@ import { runReview, exitCode } from './run.mjs';
 import { OpenELISEnvironment } from './environments/openelis.mjs';
 import { collectPR } from './github.mjs';
 import { snapshot, packetFor } from './snapshot.mjs';
-import { prepareContext, trustedConfig, configurationRequirements } from './context.mjs';
+import { prepareContext, trustedConfig, configurationRequirements, configurationSnapshot } from './context.mjs';
 import { LEVELS, resolveLevel } from './levels.mjs';
 
 import { capabilityGaps } from './reviewers/index.mjs';
 
-const help = `code-qa v0.5
+const help = `code-qa v0.6
   levels
   designs --repo /path/to/openelis-work --question "workflow or Jira key" [--head REF] --out FILE
   import --plan FILE --external FILE --out FILE
@@ -23,11 +24,12 @@ const help = `code-qa v0.5
   plan   --pr https://github.com/OWNER/REPO/pull/NUMBER --level L1..L5 [options] --out plan.json
   review --pr URL --level L1..L5 [options] [--out /durable/runs]
   plan/review --repo PATH --base REF --head REF [options]
+  plan/review --stack --repo PATH --level L1..L5 [--stack-layer PR_NUMBER] [--previous-stack PLAN] [options]
   run --plan plan.json --out /durable/runs
   cleanup --run /durable/runs/RUN_ID
 
 Options:
-  --application pr|targeted --question TEXT --lens TEXT
+  --application pr|targeted|stack --question TEXT --lens TEXT
   --path PATH (repeatable) --context FILE (repeatable)
   --requirements FILE --config FILE --environment none|openelis|container --image IMAGE
   --decisions FILE --history FILE --scenarios FILE --workflows FILE --designs FILE --runtime-check ID --sources FILE --history-depth N --probes FILE --experiments FILE --max-rounds 0..2
@@ -49,7 +51,7 @@ Exit 0: execution complete (may include findings); 2: partial/error; 3: stale/ca
 `;
 try {
   const { values: v, positionals } = parseArgs({ allowPositionals: true, strict: true, options: {
-    external:{type:'string'},result:{type:'string'},finding:{type:'string',multiple:true},verified:{type:'string',multiple:true},'authorize-publication':{type:'boolean'},help: { type:'boolean' }, pr:{type:'string'}, repo:{type:'string'}, base:{type:'string'}, head:{type:'string'},
+    stack:{type:'boolean'},'stack-layer':{type:'string'},'previous-stack':{type:'string'},external:{type:'string'},result:{type:'string'},finding:{type:'string',multiple:true},verified:{type:'string',multiple:true},'authorize-publication':{type:'boolean'},help: { type:'boolean' }, pr:{type:'string'}, repo:{type:'string'}, base:{type:'string'}, head:{type:'string'},
     out:{type:'string'}, plan:{type:'string'}, run:{type:'string'}, level:{type:'string'}, lens:{type:'string'},
     application:{type:'string'}, question:{type:'string'}, purpose:{type:'string'}, requirements:{type:'string'},
     path:{type:'string',multiple:true}, context:{type:'string',multiple:true},
@@ -78,15 +80,26 @@ try {
   if (['plan','review'].includes(action)) {
     resolveLevel(v); // Reject unknown levels before network or any model use.
     if (v.pr && (v.base || v.head)) throw new Error('--pr cannot be combined with --base/--head');
-    const source = v.pr ? await collectPR(v.pr,v.repo) : {repo:v.repo,base:v.base,head:v.head};
+    if (v.stack && (v.pr || v.base || v.head || v.application && v.application !== 'stack')) throw new Error('--stack selects its own base/head and stack application');
+    if (!v.stack && (v['stack-layer'] || v['previous-stack'])) throw new Error('Stack options require --stack');
+    if (v['stack-layer'] && !/^[1-9][0-9]*$/.test(v['stack-layer'])) throw new Error('--stack-layer must be a PR number');
+    const source = v.stack ? await collectStack(v.repo, {layerNumber: Number(v['stack-layer']) || undefined}) : v.pr ? await collectPR(v.pr,v.repo) : {repo:v.repo,base:v.base,head:v.head};
+    if (v['previous-stack']) {
+      const previous = validatePlan(JSON.parse(await readFile(v['previous-stack'],'utf8')));
+      validateStack(previous.stack);
+      if(previous.stack.repository !== source.stack.repository || previous.stack.trunk !== source.stack.trunk) throw new Error('Previous stack repository/trunk mismatch');
+      source.stack.previous = {...previous.stack};
+      delete source.stack.previous.previous;
+    }
     if (!source.repo || !source.base || !source.head) throw new Error('Provide --pr or --repo/--base/--head');
     const snap = await snapshot(source.repo,source.base,source.head);
-    const config = await trustedConfig(snap,v.config ? JSON.parse(await readFile(v.config,'utf8')) : null);
+    const configSnapshot = configurationSnapshot(snap, source.stack);
+    const config = await trustedConfig(configSnapshot,v.config ? JSON.parse(await readFile(v.config,'utf8')) : null);
     const checks = v.checks ? JSON.parse(await readFile(v.checks,'utf8')) : config.checks ?? [];
     const neighbors = await prepareContext(snap,v.path ?? [],v.context ?? [],config);
-    const baseRequirements = await configurationRequirements(snap,config);
+    const baseRequirements = await configurationRequirements(configSnapshot,config);
     const requirements = [baseRequirements, v.requirements ? await readFile(v.requirements,'utf8') : ''].filter(Boolean).join('\n\n');
-    plan = await createPlan({...source,...neighbors,application:v.application,question:v.question,purpose:v.purpose,
+    plan = await createPlan({...source,...neighbors,application:source.application ?? v.application,question:v.question,purpose:v.purpose,
       scenarios:v.scenarios ? JSON.parse(await readFile(v.scenarios,'utf8')) : config.scenarios ?? [],workflows:v.workflows ? JSON.parse(await readFile(v.workflows,'utf8')) : config.workflows ?? [],designs:v.designs ? JSON.parse(await readFile(v.designs,'utf8')) : config.designs ?? [],runtimeCheckId:v['runtime-check'] ?? config.runtimeCheckId,
       sources:v.sources ? JSON.parse(await readFile(v.sources,'utf8')) : config.sources ?? [],historyDepth:Number(v['history-depth'] ?? config.historyDepth ?? 1),
       probes:v.probes ? JSON.parse(await readFile(v.probes,'utf8')) : config.probes ?? [],experiments:v.experiments ? JSON.parse(await readFile(v.experiments,'utf8')) : config.experiments ?? [],maxRounds:Number(v['max-rounds'] ?? config.maxRounds ?? 0),
@@ -98,7 +111,7 @@ try {
     });
     const packet = await packetFor(plan);
     const preview = {level:plan.level,requiredEvidence:plan.requiredEvidence,capabilityGaps:capabilityGaps(plan),profile:plan.profile,model:plan.model,sessions:plan.maxSessions,reviewSeconds:plan.reviewSeconds,
-      sourceAccess:packet.sourceAccess,changedFiles:packet.selectedPaths.length,
+      stack:packet.stack,sourceAccess:packet.sourceAccess,changedFiles:packet.selectedPaths.length,
       contextFiles:plan.contextPaths.length,checks:plan.checks.map(c=>({id:c.id,kind:c.kind,timeoutSeconds:c.timeoutSeconds})),environment:plan.environment,startupSeconds:plan.startupSeconds,omissions:packet.omissions};
     if (action === 'plan') {
       if (!v.out) throw new Error('plan requires --out');
