@@ -1,5 +1,17 @@
 # Implementation and validation
 
+## Version 0.5 — 30 October 2026: implemented methods and explicit acceptance limits
+
+The current implementation supports evidence-based L1–L5, isolated test/probe execution, loaded-runtime verification, rendered product/design comparisons, Codex and Claude source review, managed-result exchange, explicit publication, and paired quality evaluation. Use the [execution guide](execution-guide.md), [evaluation guide](evaluation-guide.md), and [OpenELIS preparation profile](../../examples/openelis/REVIEW.md). The [checklist](roadmap.md) and [current evidence record](validation-v07.json) distinguish implemented tooling from independent quality acceptance. Entries below are historical.
+
+The OpenELIS profile now discovers `openelis-work` repository mockups and their published previews before asking the user. It records revision/provenance; Draft is context, not an approval gate. Designs define visible product intent, never engineering ownership. A reviewed comparison can complete with deviations; that does not mean the product matches the design.
+
+Executed demonstrations include an actual OpenELIS mutation with unchanged JUnit tests, a passing-per-layer/failing-assembled contract fixture, real loaded image/class identity, and a browser edit/save with persisted readback and rendered screenshots/trace. Codex and Claude inspected source through the restricted broker. Claude returned valid but partial semantic reviews; rendered-image conformance is not claimed for it.
+
+The paired development evaluation ran eight reviews using identical settings across plain/harness arms: four complete, four partial. Its labels are provisional, with a potential valid-case requirement ambiguity documented for adjudication. No accuracy, false-positive rate, or superiority claim is justified yet. Maintainers must approve independent labels and adjudicate held-out trials, including real runtime/design cases, before broader quality claims. The evaluator supports those steps; it does not manufacture independent approval.
+
+Manual hosted CI is implemented but requires merging and protected-environment configuration by the owner. Public-fork event automation remains disabled pending deployment security acceptance. Provider executables are trusted; the source/evidence broker restricts agent tools, not arbitrary provider software at the operating-system level. Nothing was merged.
+
 ## Version 0.4 — 30 October 2026: Stage 1 in progress
 
 The first implementation slice separates evidence obligations from execution settings. L1/L2 remain usable; L3–L5 return explicit partial results before startup or AI spend because their required verification executors are pending. Reports now preserve coverage, unanswered questions, counterevidence and actionable/suggestion/refuted dispositions. The core model allowlist is removed; a development profile keeps default testing inexpensive. The test-quality procedure is loaded by the reviewer.

@@ -1,0 +1,103 @@
+{
+  "version": "0.5.0",
+  "recordedAt": "2026-10-30",
+  "scope": "Harness implementation and controlled demonstrations; not current OpenELIS stack clearance",
+  "deterministic": {
+    "command": "npm test && npm run lint",
+    "tests": 79,
+    "passed": 79,
+    "failed": 0,
+    "skills": 7,
+    "log": "final-tests.log",
+    "package": "npm pack --dry-run --json; all new runtime, profile and evaluator files included",
+    "whitespace": "git diff --check passed"
+  },
+  "evidenceRoot": "/Users/pmanko/.codex/visualizations/2026/10/22/01a16543-82e0-7360-9587-a838bf3839a7/review-harness-gap-audit",
+  "demonstrations": [
+    {
+      "level": "L1",
+      "run": "stage1-container-runs/a93b3b57-6ba7-4eff-9e6d-8a27c308754e",
+      "result": "Two behavior tests passed, no model calls, isolated container removed"
+    },
+    {
+      "level": "L3",
+      "run": "stage2-openelis-runs/d8795553-2c63-4daa-a8e8-6253b0e74866",
+      "head": "37c4bc496f79feb047b2b3a68ead2b081b231571",
+      "result": "Three existing BoundedDecimal JUnit tests passed; production guard mutant failed the intended assertion; restored tests passed"
+    },
+    {
+      "level": "L3",
+      "run": "stage4-codex-runs/5e5846c4-c65d-4566-bbf6-e8ab63c99e63",
+      "result": "Complete source/test/probe review, seven broker inspections; approved removal respected"
+    },
+    {
+      "level": "L3",
+      "run": "assembled-contract-runs/739be395-6590-4f07-9b19-be5aa2e4498d",
+      "result": "Two layer tests passed; assembled contract test failed. Complete review identified producer wire-type regression, recommended producer repair rather than consumer parsing"
+    },
+    {
+      "level": "L5",
+      "run": "stage3-l5-runs/0efde657-faa9-44db-b537-013b8b61bc5b",
+      "head": "965d6d10559d9e11e8868cbc01a5157864056af9",
+      "result": "Five loaded component identities matched. Browser saved height 25 to 26; width/name/fields preserved in persisted readback. Screenshots, trace and empty browser-error list retained. Original review partial under superseded draft-reference gate. Worker removed."
+    },
+    {
+      "adapter": "claude",
+      "runs": [
+        "stage4-claude-runs/0776a377-4d33-4686-8f9f-6f66ea4ed07a",
+        "stage4-claude-runs/e6037383-61a8-428a-ad64-9d85aea881ab"
+      ],
+      "result": "Structured source inspection succeeded through restricted broker. Semantic reports partial; no clean-review or image-conformance claim"
+    }
+  ],
+  "designGuidance": {
+    "discovery": "design-discovery.json",
+    "repository": "DIGI-UW/openelis-work",
+    "discoveredRevision": "1a6cf7ca74704be3b4890f5a31f62973af0d69d9",
+    "renderedReferenceRevision": "7cf6f65cae9a9794e52f3dd4c5e759c920d87bf5",
+    "path": "designs/admin-config/barcode-labels.html",
+    "published": "https://digi-uw.github.io/openelis-work/designs/admin-config/barcode-labels.html",
+    "fileBlob": "7ed26d74e6e4220b69516adf54adf52296123958",
+    "referenceStatus": "draft",
+    "policy": "Draft is provenance, not a completion gate. Product sign-off is separate; mock technical annotations are non-normative. No current published-page screenshot is claimed."
+  },
+  "evaluation": {
+    "corpus": "seed-1-provisional",
+    "labels": "Provisional implementation-agent labels; not independent ground truth",
+    "freeze": "evaluation-freeze.json",
+    "initialBatch": "evaluation-development-1",
+    "initialResult": "Eight protocol errors retained; sourceId primary normalization fixed with regression test",
+    "batch": "evaluation-development-2",
+    "settings": {
+      "provider": "codex",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "seconds": 60,
+      "trialsPerArmPerCase": 2
+    },
+    "runs": 8,
+    "complete": 4,
+    "partial": 4,
+    "qualityAccepted": false,
+    "adjudication": "Not performed; no accuracy or superiority claim",
+    "labelConcern": "c01 declares finite producer output but unchanged producer lacks finite validation; findings may be valid. Maintainer must clarify scope/labels in a new corpus revision before scoring. Frozen batches remain unchanged.",
+    "heldOut": "Not executed; independent labels and real runtime/design cases required for corresponding quality claims"
+  },
+  "limitations": [
+    "Public-fork event automation disabled pending deployment security acceptance",
+    "Manual CI requires owner merge and protected-environment configuration",
+    "Trusted provider executables retain authentication; tool broker is not OS isolation for arbitrary binaries",
+    "Claude image capability unverified; unsupported L5 fails explicitly",
+    "Independent adjudication and held-out quality acceptance remain open"
+  ],
+  "cleanup": "limactl list reports no instances; controlled containers removed",
+  "merged": false,
+  "designReassessment": {
+    "path": "stage3-design-reassessment-3/reassessment.json",
+    "status": "complete",
+    "inspectionCalls": 8,
+    "checksReexecuted": false,
+    "result": "Scoped functional save passes; visible mock differences retained in designComparison. Draft status noted without gating; formal product sign-off separate.",
+    "earlierAttempts": "First response contained invalid check citations; second invocation had relative-path setup error. Both retained, neither counted as valid assessment."
+  }
+}

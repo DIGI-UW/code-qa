@@ -22,7 +22,7 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
   const directory = runDirectory(outputRoot, plan);
   await mkdir(outputRoot, { recursive: true, mode: 0o700 });
   await mkdir(directory, { mode: 0o700 }); // Never overwrite a prior run/evidence.
-  const run = { schemaVersion: 1, harnessVersion: '0.4.0', nodeVersion: process.version, plan, status: 'partial', assessment: 'undetermined', phase: 'prepare',
+  const run = { schemaVersion: 1, harnessVersion: '0.5.0', nodeVersion: process.version, plan, status: 'partial', assessment: 'undetermined', phase: 'prepare',
     checks: [], probes: [], artifacts:[], designs:[], reasons: [], cleanup: 'not-needed', usage: { sessions: 0, reported: null }, reviewer: null };
   const save = async () => {
     await writeFile(join(directory, 'result.json'), JSON.stringify(run, null, 2) + '\n', { mode: 0o600 });

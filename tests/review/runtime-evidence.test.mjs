@@ -41,15 +41,15 @@ with tempfile.TemporaryDirectory() as d:
 `;
  const result=await command(['python3','-c',code,script]);assert.equal(result.code,0,result.stderr);
 });
-test('L5 requires persisted results, rendered comparison and approved design; deviations remain visible',()=>{
+test('L5 requires persisted results, rendered comparison and a selected design reference; deviations remain visible',()=>{
  const rows=[{id:'save',requirement:'save dimensions',checkId:'workflow',designId:'approved'}];
  const checks=[{id:'workflow',kind:'scenario',status:'pass',executed:1}];
  const artifacts=[{id:'screen',kind:'screenshot',checkId:'workflow'},{id:'stored',kind:'readback',checkId:'workflow'}];
  const designs=[{id:'approved',approvalStatus:'approved'}];
  const answer={id:'save',status:'pass',reason:'Matches selected workflow',observedOutcome:'Saved confirmation',persistedOutcome:'Height reads back as 26',designId:'approved',designComparison:'Editor fields and saved row match reference',artifactIds:['screen','stored']};
- assert.deepEqual(assessAcceptance(rows,{acceptance:[answer]},checks,artifacts,designs),{gaps:[],deviations:[]});
+ assert.deepEqual(assessAcceptance(rows,{acceptance:[answer]},checks,artifacts,designs),{gaps:[],deviations:[],referenceNotes:[]});
  assert.ok(assessAcceptance(rows,{acceptance:[answer]},checks,artifacts.filter(a=>a.kind!=='readback'),designs).gaps.length);
- assert.ok(assessAcceptance(rows,{acceptance:[answer]},checks,artifacts,[{id:'approved',approvalStatus:'draft'}]).gaps.some(g=>g.includes('approval')));
+ const draft=assessAcceptance(rows,{acceptance:[answer]},checks,artifacts,[{id:'approved',approvalStatus:'draft'}]);assert.equal(draft.gaps.length,0);assert.match(draft.referenceNotes[0],/draft/);
  assert.equal(assessAcceptance(rows,{acceptance:[{...answer,status:'fail',reason:'Save button absent'}]},checks,artifacts,designs).deviations.length,1);
 });
 test('Codex receives actual image attachments, not just descriptions',()=>{

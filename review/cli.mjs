@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import {discoverOpenELISDesigns} from './design-discovery.mjs';
 import {importReport,publication} from './exchange.mjs';
 import { parseArgs } from 'node:util';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
@@ -14,8 +15,9 @@ import { LEVELS, resolveLevel } from './levels.mjs';
 
 import { capabilityGaps } from './reviewers/index.mjs';
 
-const help = `code-qa v0.4
+const help = `code-qa v0.5
   levels
+  designs --repo /path/to/openelis-work --question "workflow or Jira key" [--head REF] --out FILE
   import --plan FILE --external FILE --out FILE
   publish --result FILE --finding ID --verified ID [repeat IDs] [--authorize-publication]
   plan   --pr https://github.com/OWNER/REPO/pull/NUMBER --level L1..L5 [options] --out plan.json
@@ -59,6 +61,10 @@ try {
   if (v.help || !action) { console.log(help); process.exit(0); }
   if (positionals.length !== 1) throw new Error('Expected one command');
   if (action === 'levels') { console.log(JSON.stringify(LEVELS,null,2)); process.exit(0); }
+  if(action==='designs') {
+    if(!v.repo||!v.question||!v.out)throw new Error('designs requires --repo, --question and --out');
+    await writeFile(resolve(v.out),JSON.stringify(await discoverOpenELISDesigns(v.repo,v.question,v.head??'HEAD'),null,2)+'\n',{flag:'wx',mode:0o600});process.exit(0);
+  }
   if(action==='import') {
     if(!v.plan||!v.external||!v.out)throw new Error('import requires --plan, --external and --out');
     const result=await importReport(JSON.parse(await readFile(v.external,'utf8')),JSON.parse(await readFile(v.plan,'utf8')));

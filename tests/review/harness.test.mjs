@@ -8,7 +8,7 @@ import { command, requireSuccess } from '../../review/process.mjs';
 import { createPlan, validatePlan } from '../../review/plan.mjs';
 import { git, packetFor } from '../../review/snapshot.mjs';
 import { runReview, exitCode } from '../../review/run.mjs';
-import { validateReviewer } from '../../review/report.mjs';
+import { validateReviewer, renderReport } from '../../review/report.mjs';
 import { codexArgs, reviewWithCodex } from '../../review/reviewers/codex.mjs';
 import { OpenELISEnvironment, workerName } from '../../review/environments/openelis.mjs';
 
@@ -395,3 +395,18 @@ for (const disposition of ['actionable','suggestion','refuted']) {
     assert.equal(r.run.reviewer.findings.length,1);
   });
 }
+test('check citations match raw field text including quotes/newlines, never stitched paraphrases',()=>{
+ const report=cleanReport('a'.repeat(40));report.findings=[{title:'Observed failure',owner:'fixture',consequence:'Saved value is wrong',severity:'medium',disposition:'actionable',counterevidence:'Other case passes',alternative:'',evidence:[{kind:'check',path:'result.xml',side:'head',line:0,checkId:'saved',quote:'Actual message: "wrong"\nExpected 2'}]}];
+ const packet={snapshot:{head:'a'.repeat(40)},files:[]};const checks=[{id:'saved',name:'save value',status:'fail',detail:'Actual message: "wrong"\nExpected 2'}];
+ validateReviewer(report,packet,checks);
+ report.findings[0].evidence[0].quote='save value: fail; Actual message: "wrong"';assert.throws(()=>validateReviewer(report,packet,checks),/does not match/);
+});
+
+test('readable report retains visual differences even when the scoped functional workflow passes', async t => {
+  const f=await fixture(t),plan=await planFor(f);
+  const result=await runReview(plan,f.output);
+  result.run.reviewer={...cleanReport(plan.snapshot.head),acceptance:[{id:'save',status:'pass',reason:'Selected save works',observedOutcome:'Saved notice',persistedOutcome:'Readback height 26',designId:'draft-editor',designComparison:'Unchecked inputs are hidden instead of visible disabled inputs',artifactIds:['saved','screenshot']}]};
+  const text=renderReport(result.run);
+  assert.match(text,/Unchecked inputs are hidden instead of visible disabled inputs/);
+  assert.match(text,/Readback height 26/);assert.match(text,/draft-editor/);assert.match(text,/saved, screenshot/);
+});

@@ -1,0 +1,13 @@
+{
+  "adapter": "codex",
+  "model": "gpt-6.1-sol",
+  "reasoningEffort": "low",
+  "reviewSeconds": 60,
+  "trials": 2,
+  "targets": {
+    "minRecall": 0.8,
+    "maxFalsePositiveRate": 0.1,
+    "maxHarmfulRate": 0,
+    "minCompletion": 0.9
+  }
+}

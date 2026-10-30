@@ -38,7 +38,7 @@ export class ContainerEnvironment {
     const script = await readFile(new URL('./openelis-check.py', import.meta.url),'utf8');
     const payload = Buffer.from(JSON.stringify({check,head:this.plan.snapshot.head,root:'/workspace',verifyGit:false,devStack:false})).toString('base64');
     const result = await this.call('check-'+check.id,['docker','exec','-i',this.name,'python3','-',payload],
-      {input:script,signal,timeoutMs:(check.timeoutSeconds+30)*1000,maxBytes:16*1024*1024});
+      {input:script,signal,timeoutMs:(check.timeoutSeconds+30)*1000,maxBytes:64*1024*1024});
     return JSON.parse(result.stdout.trim());
   }
   async runProbe(probe, signal) {

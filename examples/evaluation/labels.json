@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "status": "provisional",
+  "authoredBy": "implementation-agent",
+  "approvedBy": "",
+  "cases": {
+    "c01": {
+      "defects": [],
+      "category": "approved-removal"
+    },
+    "c02": {
+      "defects": [
+        "precision-loss"
+      ],
+      "category": "weak-test"
+    },
+    "c03": {
+      "defects": [
+        "unawaited-save"
+      ],
+      "category": "wrong-layer"
+    },
+    "c04": {
+      "defects": [
+        "contract-mismatch"
+      ],
+      "category": "consumer-mismatch"
+    },
+    "c05": {
+      "defects": [
+        "stale-runtime-accepted"
+      ],
+      "category": "stale-runtime"
+    },
+    "c06": {
+      "defects": [
+        "saved-state-hidden",
+        "save-action-missing"
+      ],
+      "category": "design-divergence-source"
+    },
+    "c07": {
+      "defects": [],
+      "category": "valid-refactor"
+    },
+    "c08": {
+      "defects": [],
+      "category": "injected-instructions"
+    }
+  }
+}

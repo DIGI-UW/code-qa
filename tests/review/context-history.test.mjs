@@ -78,3 +78,13 @@ test('strict provider schema accepts optional protocol fields without imposing p
  const report=normalizeOptional({...cleanReport(head),priorFindings:null,behaviors:null,requestedChecks:null},reviewerSchema);
  validateSchema(report,reviewerSchema);assert.equal('priorFindings' in report,false);
 });
+test('all re-review dispositions retain evidence, and still-present must link this round',()=>{
+ const original=identifyFindings({findings:[finding]},'example/repo',head);
+ const prior={schemaVersion:1,repository:'example/repo',head,findings:original,rounds:[]};
+ const current=identifyFindings({findings:[{...finding,evidence:[{...finding.evidence[0],line:5}]}]},'example/repo',next);
+ for(const status of ['still-present','resolved','superseded','declined','unverified']) {
+  const report={...cleanReport(next),priorFindings:[{id:original[0].id,currentFindingId:status==='still-present'?current[0].id:'',status,reason:'Current evidence assessed against accepted boundary',evidence:status==='unverified'?[]:current[0].evidence}]};
+  const updated=reconcileHistory(prior,report,current,'example/repo',next);assert.equal(updated.rounds[0].status,status);assert.equal(updated.rounds[0].originalHead,head);assert.equal(updated.rounds[0].head,next);
+  if(status==='still-present')assert.throws(()=>reconcileHistory(prior,report,[],'example/repo',next),/current finding/);
+ }
+});

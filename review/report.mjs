@@ -114,7 +114,8 @@ export function validateReviewer(report, packet, checks) {
         if (evidence.line < 1 || column < 0 || !lines.slice(evidence.line - 1).join('\n').slice(column).startsWith(evidence.quote)) throw new Error('Source evidence does not match the recorded file/line');
       } else {
         const check = checks.find(c => c.id === evidence.checkId);
-        if (!check || !JSON.stringify(check).includes(evidence.quote)) throw new Error('Check evidence does not match this run');
+        const fields=value=>typeof value==='string'?[value]:value&&typeof value==='object'?Object.values(value).flatMap(fields):[String(value)];
+        if (!check || !fields(check).some(text=>text.includes(evidence.quote))) throw new Error('Check evidence does not match this run');
       }
     }
   }
@@ -141,8 +142,12 @@ export function renderReport(run) {
   if(run.probes?.length) lines.push('', '## Test-strength probes', '', ...run.probes.map(p=>'- '+p.id+': '+p.outcome+(p.reason?' — '+p.reason:'')));
   if(run.runtimeAssessment) lines.push('', '## Loaded runtime', '', run.runtimeAssessment.status, ...run.runtimeAssessment.reasons.map(r=>'- '+r));
   if(run.artifacts?.length) lines.push('', '## Retained evidence', '', ...run.artifacts.map(a=>'- '+a.id+' ('+a.kind+'): '+a.path));
-  if(run.acceptance) lines.push('', '## Product acceptance', '', ...run.acceptance.deviations.map(d=>'- Deviation: '+d),...run.acceptance.gaps.map(g=>'- Unverified: '+g));
+  if(run.acceptance) lines.push('', '## Product acceptance', '', ...run.acceptance.deviations.map(d=>'- Deviation: '+d),...run.acceptance.gaps.map(g=>'- Unverified: '+g),...(run.acceptance.referenceNotes??[]).map(n=>'- Reference: '+n));
   if (run.reviewer) {
+    for(const workflow of run.reviewer.acceptance??[]) lines.push('', '### Workflow: '+workflow.id+' — '+workflow.status, '',
+      workflow.reason, '', 'Observed: '+workflow.observedOutcome, '', 'Saved state: '+workflow.persistedOutcome,
+      '', 'Design comparison ('+(workflow.designId||'inapplicable')+'): '+workflow.designComparison,
+      '', 'Evidence: '+workflow.artifactIds.join(', '));
     if(run.reviewer.behaviors?.length) lines.push('', '## Behavior and test coverage', '', ...run.reviewer.behaviors.map(b=>'- '+b.behavior+' ['+(b.scope ?? 'in-scope')+']: '+b.layer+'; test '+(b.test || 'missing')+'; assertion '+b.assertion+(b.gap?' — Gap: '+b.gap:'')));
     lines.push('', '## Reviewer assessment', '', run.reviewer.summary);
     lines.push('', '## Coverage', '', ...run.reviewer.assessments.map(a => '- ' + a.area + ': ' + a.status + ' — ' + a.reason));

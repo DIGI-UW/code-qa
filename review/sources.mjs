@@ -3,7 +3,7 @@ export function validateSources(sources) {
   if(!Array.isArray(sources)) throw new Error('sources must be an array');
   const ids=new Set();
   for(const s of sources) {
-    if(!/^[a-z][a-z0-9-]{0,63}$/.test(s.id) || ids.has(s.id)) throw new Error('Unique source ID required');
+    if(!/^[a-z][a-z0-9-]{0,63}$/.test(s.id) || s.id==='primary' || ids.has(s.id)) throw new Error('Unique source ID required');
     ids.add(s.id);
     if(!s.repository || typeof s.repo!=='string' || !s.repo.startsWith('/') || !SHA.test(s.revision) || !['dependency','consumer','stack'].includes(s.role) || typeof s.required!=='boolean') throw new Error('Source must identify pinned repository, role and applicability');
     if(s.pinPath) sourcePath(s.pinPath);

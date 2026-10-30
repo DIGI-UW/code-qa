@@ -1,12 +1,11 @@
-# Review runner, version 0.4
+# Review runner, version 0.5
 
-Run a mechanical or Codex review of an existing GitHub PR, or select local committed
-revisions. L1 and L2 are executable. Levels L3–L5 have explicit evidence requirements but their verification executors are not implemented yet; requests return partial before startup or AI spend. L1/L2 can still consume declared checks in disposable OpenELIS. Reports stay local.
+Run selected L1–L5 reviews against pinned GitHub PRs or local committed revisions. Each level requires its actual evidence. Reports remain local unless the operator explicitly invokes publication. The [execution guide](ogc-1560-review-harness/execution-guide.md) specifies decisions, history, attached repositories, checks/probes, runtime evidence, workflows/designs and managed-result exchange.
 
 ## Install and start
 
 Requirements: Node.js 20+, Git, and authenticated `gh` for PR URLs. AI levels also
-need an authenticated Codex CLI (validated with 0.165.0). OpenELIS execution needs
+need an authenticated Codex CLI (validated with 0.165.0) or Claude CLI. OpenELIS execution needs
 Python 3, Lima 2+ (validated with 2.2.1), virtualization, internet, and room for a
 48 GiB sparse worker disk. Each worker uses 4 CPUs and 12 GiB memory. macOS VZ is
 supported; Linux-host execution has not been validated. There are no npm dependencies.
@@ -48,9 +47,9 @@ of the level. Supplying a question defaults to targeted application.
 | --- | --- | --- |
 | L1 Mechanical | Selected deterministic checks; zero AI | Available |
 | L2 Semantic | Intent, ownership, consumers and test adequacy; explicit questions and coverage | Available as reviewer judgments with source/check evidence |
-| L3 Test strength | L2 plus applicable executable test-strength proof | Partial: executor pending |
-| L4 Running integration | L3 plus loaded-candidate identity and integration scenarios | Partial: executors pending |
-| L5 Product acceptance | L4 plus full-stack workflow/design acceptance | Partial: executors pending |
+| L3 Test strength | L2 plus applicable executable test-strength proof | Applicable production mutation/revert against fixed tests |
+| L4 Running integration | L3 plus loaded-candidate identity and integration scenarios | Loaded-artifact and selected integration evidence |
+| L5 Product acceptance | L4 plus full-stack workflow/design acceptance | Rendered comparison and saved-state acceptance matrix |
 
 A check labeled scenario cannot satisfy higher-level requirements. Plan schema 4
 and evidence-contract version 3 prevent old saved plans from silently acquiring new semantics.
@@ -58,17 +57,13 @@ and evidence-contract version 3 prevent old saved plans from silently acquiring 
 Execution defaults are separate: the development profile uses one gpt-6.1-sol session,
 120 seconds and low reasoning. It is the inexpensive default while the harness is
 being developed, not a model ceiling. Use --model MODEL_ID, --review-seconds and
---reasoning-effort to override supported settings. Only the Codex adapter is currently
-installed; it passes the selected model to Codex, which determines availability.
-An unavailable model fails without fallback. Other adapters remain roadmap work.
+--reasoning-effort to override supported settings. Codex and Claude adapters pass the explicitly selected model to their CLI. Claude requires --adapter claude --model MODEL_ID. An unavailable model fails without fallback. Claude L5 remains unavailable pending image conformance.
 
 The preview and report show required evidence, capability gaps, execution profile
 and effective settings. Higher levels do not implicitly select stronger models,
 more reasoning or more sessions. There is no source-byte cap. Time limits do not
-enforce tokens or dollars; hard token/currency caps and extra sessions remain
-unsupported. Reported usage is retained without converting subscription credits
-into dollars. L1 is the default; legacy rigor aliases select L1/L3, with L3 now
-reporting its missing evidence capabilities.
+enforce tokens or dollars; hard token/currency caps remain unsupported. --max-rounds 0..2 explicitly reserves additional reconsideration sessions within the same total time allowance. Reported usage is retained without converting subscription credits
+into dollars. L1 is the default; legacy rigor aliases select L1/L3, with the same evidence requirements as an explicit level.
 
 A source-only L2 review does not claim runtime acceptance. Missing necessary context,
 unassessed areas or unanswered verification questions yield partial/undetermined.
@@ -149,7 +144,7 @@ complete analyzer or AMR acceptance suite. A check has this shape:
 ```
 
 `--checks FILE` contains an array of checks and overrides base-config checks.
-`kind` is `test` or `scenario`; scenario means an explicitly selected interaction
+`kind` is `test`, `scenario` or `command`; scenario means an explicitly selected interaction
 check. `argv` runs directly, without implicit shell expansion. Optional `cwd` and
 report patterns are relative to the isolated source root. Checks receive the
 launcher’s exported environment, including test endpoint URLs. At most 20 checks
@@ -157,8 +152,7 @@ may run; each has a 1–3600 second limit. Select fresh JUnit XML reports from t
 command; stale matching reports are removed before execution. At least one
 non-skipped testcase is required. Malformed, missing, zero-test, timeout and
 command-failure output cannot become behavioral proof. Test failures retain their
-assertions as findings. These are declared checks run before review, not probes
-dynamically requested by the model.
+assertions as findings. Predeclared experiments may also be requested by the reviewer within an explicitly reserved round allowance. Only catalog IDs execute; the model cannot supply commands.
 
 ## Isolation and lifecycle
 
@@ -169,13 +163,12 @@ the exact public `DIGI-UW/OpenELIS-Global-2` commit and its recorded dependencie
 local OpenELIS plans must use a commit available there. It invokes the repository’s
 `scripts/dev-stack up --build --no-scenarios`. The chosen revision must support
 that interface. Application startup remains owned by OpenELIS, not duplicated in
-code-qa. Other repositories can use source-only review; other environments are
-not implemented.
+code-qa. Other repositories can use the generic isolated container executor or source-only review; see the execution guide.
 
 Startup builds from source and waits for login readiness. Authentication smoke
 checks valid test-admin login, rejection of an incorrect password, and the frontend
 application root. Declared checks then run, evidence is collected and the whole
-VM is removed before the reviewer starts. Startup defaults to 3600 seconds,
+VM is removed after review and any authorized requested experiments. Startup defaults to 3600 seconds,
 overridden with `--startup-seconds`; each test, evidence collection and cleanup
 has its own timeout. Failure/cancellation also triggers scoped cleanup. A forced
 coordinator kill may leave a worker; recover only that run with:
@@ -184,23 +177,7 @@ coordinator kill may leave a worker; recover only that run with:
 code-qa cleanup --run /path/to/review-runs/RUN_ID
 ```
 
-Codex receives scope and check evidence in a separate directory with a fresh bare
-Git repository containing the pinned base/head snapshots. It uses `git diff`,
-`git grep` and `git show` through a read-only shell; the source is not checked out.
-This avoids loading PR-owned agent instructions, configuration or symlinks as
-filesystem configuration. Local uncommitted/untracked files, repository configuration,
-hooks and remotes are not copied. The snapshot and command transcript are retained.
-
-The adapter ignores user configuration and rules, disables automatic project
-instructions, host skills, hooks, memory, apps and delegation, and uses no approvals.
-Shell commands receive a minimal environment. The reviewer is instructed to inspect
-only the snapshot, never run repository code/tests, read host credentials, repair,
-publish or merge. Read-only mode prevents filesystem mutations and disables command
-network access; it is **not a confidentiality boundary for all host reads**. Use a
-dedicated coordinator for hostile public-fork review. This is not a penetration-tested
-multi-tenant service. Authentication stays on the coordinator, not in the OpenELIS
-worker or snapshot. Artifacts may contain source and logs; retain them privately and
-publish only deliberately selected evidence.
+Codex and Claude receive pinned source through a read-only operation broker, with built-in shell/file/network/write tools disabled. Bare Git data never activates repository instructions, configuration or symlinks. Supplied artifacts are readable by ID; other host files and credentials are not exposed through tools. The trusted provider executable retains authentication. This is a capability boundary, not an OS sandbox for arbitrary provider software. See the [automation boundary](ogc-1560-review-harness/automation-boundary.md) for validated controls and remaining deployment acceptance.
 
 ## Reports and exit codes
 
@@ -226,9 +203,7 @@ alone is not an approval. Reports never establish full CI health or mergeability
 Run `npm test` and `npm run lint` without AI credentials. The
 [implementation record](ogc-1560-review-harness/implementation-status.md) distinguishes
 automated harness tests, real source reviews and isolated OpenELIS execution.
-Claude/other adapters, managed-review import/export, automatic GitHub publication,
-review-thread and stack/dependency collection, dynamic probes and the held-out
-quality evaluation remain later milestones. Local PR collection, freshness, L1/L2 execution and higher-level capability-gap reporting are implemented. See the [checklist](ogc-1560-review-harness/roadmap.md) for unfinished Stage 1 work as well as later stages.
+The implemented CLI includes Codex/Claude adapters, external-result import, explicit verified-finding publication, conversation/history and pinned dependency collection, probes and paired evaluation. See the [checklist](ogc-1560-review-harness/roadmap.md) for acceptance evidence and remaining independent labels/adjudication, and deployment configuration. The manual hosted CI profile supports source-only L1/L2; richer levels use isolated local execution.
 
 Adapter references: [Codex developer commands](https://learn.chatgpt.com/docs/developer-commands),
 [configuration](https://learn.chatgpt.com/docs/config-file/config-reference),
