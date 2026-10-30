@@ -1,0 +1,42 @@
+import { mkdir } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { command, requireSuccess } from './process.mjs';
+import { git } from './snapshot.mjs';
+
+export function parsePR(url) {
+  const match = /^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/pull\/([1-9]\d*)\/?$/.exec(url);
+  if (!match || ['.', '..'].includes(match[1]) || ['.', '..'].includes(match[2])) throw new Error('Use a github.com pull request URL');
+  return { repository: match[1] + '/' + match[2], number: Number(match[3]), url: url.replace(/\/$/, '') };
+}
+async function gh(args, execute = command) { return requireSuccess(await execute(['gh', ...args]), 'GitHub').stdout; }
+export async function readPR(identity, execute = command) {
+  const info = JSON.parse(await gh(['pr', 'view', String(identity.number), '--repo', identity.repository, '--json',
+    'number,url,title,body,baseRefName,baseRefOid,headRefName,headRefOid,state'], execute));
+  return { ...identity, ...info };
+}
+export async function collectPR(url, repoPath, execute = command) {
+  const identity = parsePR(url), info = await readPR(identity, execute);
+  if (info.state !== 'OPEN') throw new Error('PR is not open; use explicit base/head for a historical review');
+  const repo = resolve(repoPath ?? join(homedir(), '.cache', 'code-qa', ...identity.repository.split('/')));
+  if (!repoPath) {
+    await mkdir(repo, { recursive: true });
+    await git(repo, ['init', '--bare']);
+  }
+  // Explicit URL and SHA fetches do not alter the user's checkout or branch refs.
+  await git(repo, ['fetch', '--no-tags', '--no-recurse-submodules', 'https://github.com/' + identity.repository + '.git', info.baseRefOid, info.headRefOid]);
+  const after = await readPR(identity, execute);
+  if (after.baseRefOid !== info.baseRefOid || after.headRefOid !== info.headRefOid) throw new Error('PR moved during collection; plan again');
+  let checks = [], checksWarning = '';
+  try {
+    const result = await execute(['gh','pr','checks',String(identity.number),'--repo',identity.repository,'--json','name,state,bucket,link']);
+    if (![0,1,8].includes(result.code)) requireSuccess(result, 'Collect PR checks');
+    checks = JSON.parse(result.stdout);
+  } catch (error) { checksWarning = error.message; }
+  return { repo, base: info.baseRefOid, head: info.headRefOid, pullRequest: { ...info, observedAt: new Date().toISOString(), checks, checksWarning } };
+}
+export async function isPRFresh(plan, execute = command) {
+  if (!plan.pullRequest) return true;
+  const current = await readPR(plan.pullRequest, execute);
+  return current.state === 'OPEN' && current.baseRefOid === plan.snapshot.base && current.headRefOid === plan.snapshot.head;
+}

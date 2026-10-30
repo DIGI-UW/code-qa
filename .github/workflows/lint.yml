@@ -13,3 +13,5 @@ jobs:
           node-version: "20"
       - name: Validate SKILL.md frontmatter
         run: node scripts/validate-skills.mjs
+      - name: Test local review harness
+        run: npm test

@@ -1,0 +1,32 @@
+# A disposable worker: no host workspace mounts, forwarded agent, or application ports.
+minimumLimaVersion: 2.0.0
+base:
+- template:_images/ubuntu-24.04
+cpus: 4
+memory: 12GiB
+disk: 48GiB
+mounts: []
+containerd:
+  system: false
+  user: false
+ssh:
+  forwardAgent: false
+  forwardX11: false
+  forwardX11Trusted: false
+  loadDotSSHPubKeys: false
+portForwards:
+- guestPortRange: [1, 65535]
+  guestIP: 0.0.0.0
+  guestIPMustBeZero: false
+  proto: any
+  ignore: true
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -euo pipefail
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y docker.io docker-compose-v2 openjdk-21-jdk-headless maven git curl gettext-base ca-certificates python3 jq zip
+    systemctl enable --now docker
+    usermod -aG docker "{{.User}}"

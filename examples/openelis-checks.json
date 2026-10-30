@@ -1,0 +1,29 @@
+[
+  {
+    "id": "analyzer-result-contract",
+    "kind": "test",
+    "argv": [
+      "mvn",
+      "-q",
+      "-Dtest=AnalyzerNormalizedResultContractTest",
+      "test"
+    ],
+    "reports": [
+      "target/surefire-reports/TEST-*.xml"
+    ],
+    "timeoutSeconds": 900
+  },
+  {
+    "id": "fhir-roundtrip",
+    "kind": "scenario",
+    "argv": [
+      "python3",
+      "-c",
+      "import json, os, ssl, uuid, urllib.request, urllib.error, xml.etree.ElementTree as ET, traceback, subprocess, tempfile\nfrom pathlib import Path\nbase=os.environ[\"FHIR_URL\"].rstrip(\"/\") + \"/fhir\"\nurl=base+\"/Organization/code-qa-\"+str(uuid.uuid4())\n# Only disposable worker-generated test keys are used; nothing leaves the VM.\ncontainer=subprocess.check_output([\"docker\",\"ps\",\"-aq\",\"--filter\",\"label=com.docker.compose.project=\"+os.environ[\"COMPOSE_PROJECT_NAME\"],\"--filter\",\"label=com.docker.compose.service=certs\"],text=True).split()\nassert len(container)==1, \"Expected this worker's certificate container\"\nctx=ssl._create_unverified_context()\nwith tempfile.TemporaryDirectory() as certdir:\n for name in (\"server.crt\",\"server.key\"):\n  subprocess.run([\"docker\",\"cp\",container[0]+\":/etc/openelis-global/install/\"+name,certdir+\"/\"+name],check=True,capture_output=True)\n ctx.load_cert_chain(certdir+\"/server.crt\",certdir+\"/server.key\")\ndef call(method, body=None):\n data=None if body is None else json.dumps(body).encode()\n req=urllib.request.Request(url,data=data,method=method,headers={\"Content-Type\":\"application/fhir+json\",\"Accept\":\"application/fhir+json\"})\n with urllib.request.urlopen(req,context=ctx,timeout=20) as response:\n  raw=response.read()\n  return response.status, json.loads(raw) if raw else None\nsuite=ET.Element(\"testsuite\",name=\"isolated-fhir-roundtrip\")\ncase=ET.SubElement(suite,\"testcase\",name=\"create_read_update_delete_organization\")\nfailed=False\ntry:\n resource={\"resourceType\":\"Organization\",\"id\":url.rsplit(\"/\",1)[1],\"active\":True,\"name\":\"code-qa synthetic before\"}\n status,first=call(\"PUT\",resource);assert status in (200,201)\n assert call(\"GET\")[1][\"name\"]==\"code-qa synthetic before\"\n resource[\"name\"]=\"code-qa synthetic after\";call(\"PUT\",resource)\n assert call(\"GET\")[1][\"name\"]==\"code-qa synthetic after\"\n call(\"DELETE\")\n try:\n  call(\"GET\");raise AssertionError(\"Deleted organization still readable\")\n except urllib.error.HTTPError as error:\n  assert error.code in (404,410)\nexcept AssertionError:\n failed=True;ET.SubElement(case,\"failure\",message=\"FHIR roundtrip assertion failed\").text=traceback.format_exc()\nexcept Exception:\n # Authentication/network/runner errors are unverified, not behavioral findings.\n failed=True;suite.remove(case);traceback.print_exc()\nfinally:\n try:call(\"DELETE\")\n except Exception:pass\n Path(\"target/code-qa\").mkdir(parents=True,exist_ok=True)\n ET.ElementTree(suite).write(\"target/code-qa/fhir-roundtrip.xml\")\nraise SystemExit(1 if failed else 0)\n"
+    ],
+    "reports": [
+      "target/code-qa/fhir-roundtrip.xml"
+    ],
+    "timeoutSeconds": 180
+  }
+]

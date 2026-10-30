@@ -6,3 +6,8 @@ evidence-bundle-*/
 *.zip
 *.mp4
 .DS_Store
+
+# Local review evidence and disposable run state
+.review-runs/
+
+__pycache__/

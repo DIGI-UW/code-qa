@@ -1,0 +1,443 @@
+{
+  "date": "2026-10-29",
+  "implementationCommit": "933452554216b791a30efc1691677c4871af7b31",
+  "automatedTests": {
+    "passed": 37,
+    "failed": 0,
+    "skipped": 0
+  },
+  "skillsValidated": 7,
+  "installedPackageCliVerified": true,
+  "runs": [
+    {
+      "runId": "3992c6c9-ddbe-4b7f-8de4-72bf16224634",
+      "level": "L1",
+      "sourceHead": "d9655f34f5d28b0f04e601bc5a0b5ce72fc8cd18",
+      "application": "pr",
+      "question": "",
+      "model": "",
+      "reviewSeconds": 0,
+      "status": "complete",
+      "assessment": "no_findings",
+      "reasons": [],
+      "cleanup": "not-needed",
+      "usage": {
+        "sessions": 0,
+        "reported": null
+      },
+      "checks": [
+        {
+          "id": "whitespace",
+          "status": "pass"
+        }
+      ],
+      "reviewer": null
+    },
+    {
+      "runId": "f94c3d9e-0963-4fa4-bdeb-82f1d8f3dfc1",
+      "level": "L2",
+      "sourceHead": "d9655f34f5d28b0f04e601bc5a0b5ce72fc8cd18",
+      "application": "targeted",
+      "question": "Does the command runner terminate its child process group on timeout and report that execution as unsuccessful? Review only this process-lifecycle boundary.",
+      "model": "gpt-6.1-sol",
+      "reviewSeconds": 120,
+      "status": "error",
+      "assessment": "undetermined",
+      "reasons": [
+        "Source evidence does not match the recorded file/line"
+      ],
+      "cleanup": "not-needed",
+      "usage": {
+        "sessions": 1,
+        "reported": null
+      },
+      "checks": [
+        {
+          "id": "whitespace",
+          "status": "pass"
+        }
+      ],
+      "reviewer": null
+    },
+    {
+      "runId": "a96a2d7b-22c8-43e7-a32b-9c13b15d681f",
+      "level": "L2",
+      "sourceHead": "933452554216b791a30efc1691677c4871af7b31",
+      "application": "targeted",
+      "question": "Does the command runner terminate its owned process group on timeout or cancellation and report that execution as unsuccessful? Review this boundary only; escaped independent process groups and whole-program acceptance are excluded.",
+      "model": "gpt-6.1-sol",
+      "reviewSeconds": 120,
+      "status": "complete",
+      "assessment": "findings",
+      "reasons": [],
+      "cleanup": "not-needed",
+      "usage": {
+        "sessions": 1,
+        "reported": {
+          "input_tokens": 12647,
+          "cached_input_tokens": 0,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 485,
+          "reasoning_output_tokens": 54
+        }
+      },
+      "checks": [
+        {
+          "id": "whitespace",
+          "status": "pass"
+        }
+      ],
+      "reviewer": {
+        "schemaVersion": 1,
+        "head": "933452554216b791a30efc1691677c4871af7b31",
+        "summary": "Cancellation can be missed while the command log is being opened. Timeout handling otherwise targets the owned process group and marks execution unsuccessful.",
+        "coverage": "complete",
+        "omissions": [],
+        "findings": [
+          {
+            "title": "Recheck cancellation after asynchronous log setup",
+            "consequence": "If the signal is aborted during log setup, the initial check has already passed and the abort listener is registered too late to receive the event. The command then starts and can finish with code 0 and cancelled=false, which requireSuccess accepts. Otherwise it continues until its timeout instead of terminating promptly on cancellation.",
+            "owner": "review/process.mjs command",
+            "severity": "medium",
+            "evidence": [
+              {
+                "kind": "source",
+                "path": "review/process.mjs",
+                "side": "head",
+                "line": 8,
+                "checkId": "",
+                "quote": "  if (signal?.aborted) return { code: null, cancelled: true, stdout: '', stderr: '', elapsedMs: 0 };"
+              },
+              {
+                "kind": "source",
+                "path": "review/process.mjs",
+                "side": "head",
+                "line": 12,
+                "checkId": "",
+                "quote": "    await mkdir(dirname(log), { recursive: true, mode: 0o700 });\n    file = await open(log, 'wx', 0o600);\n    await file.write(`${JSON.stringify({ argv, cwd, started: new Date(started).toISOString() })}\\n`);"
+              },
+              {
+                "kind": "source",
+                "path": "review/process.mjs",
+                "side": "head",
+                "line": 32,
+                "checkId": "",
+                "quote": "    const abort = () => { cancelled = true; stop(); };\n    signal?.addEventListener('abort', abort, { once: true });"
+              },
+              {
+                "kind": "source",
+                "path": "review/process.mjs",
+                "side": "head",
+                "line": 61,
+                "checkId": "",
+                "quote": "  if (result.code === 0 && !result.timedOut && !result.cancelled && !result.overflow && !result.spawnError) return result;"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "runId": "3a4c5d59-596a-4b2c-bee6-311f1e5dbd5e",
+      "level": "L5",
+      "sourceHead": "556f35d6708f28ec32659a9f25a5ab5e80c268a4",
+      "application": "targeted",
+      "question": "Does the selected canonical result parser preserve delivered numbers and reject unsupported types without falling back to raw input?",
+      "model": "gpt-6.1-sol",
+      "reviewSeconds": 120,
+      "status": "complete",
+      "assessment": "findings",
+      "reasons": [],
+      "cleanup": "removed",
+      "usage": {
+        "sessions": 1,
+        "reported": {
+          "input_tokens": 32269,
+          "cached_input_tokens": 0,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 797,
+          "reasoning_output_tokens": 669
+        }
+      },
+      "checks": [
+        {
+          "id": "whitespace",
+          "status": "pass"
+        },
+        {
+          "id": "openelis-authentication-smoke",
+          "status": "pass",
+          "executed": 3
+        },
+        {
+          "id": "analyzer-result-contract",
+          "status": "pass",
+          "executed": 24
+        },
+        {
+          "id": "fhir-roundtrip",
+          "status": "fail",
+          "executed": 1
+        }
+      ],
+      "reviewer": {
+        "schemaVersion": 1,
+        "head": "556f35d6708f28ec32659a9f25a5ab5e80c268a4",
+        "summary": "No actionable findings. The parser preserves delivered numeric values and comparators and rejects unsupported value types without reconstructing values from raw input. All 24 contract tests passed. The synthetic FHIR roundtrip failed during certificate authentication and provides no evidence about parser behavior.",
+        "coverage": "complete",
+        "omissions": [],
+        "findings": []
+      }
+    },
+    {
+      "runId": "89d9c2ae-ded5-4e76-8dc8-61214ea57a55",
+      "level": "L5",
+      "sourceHead": "556f35d6708f28ec32659a9f25a5ab5e80c268a4",
+      "application": "targeted",
+      "question": "Does the selected canonical result parser preserve delivered numbers and reject unsupported types without falling back to raw input?",
+      "model": "gpt-6.1-sol",
+      "reviewSeconds": 120,
+      "status": "complete",
+      "assessment": "no_findings",
+      "reasons": [],
+      "cleanup": "removed",
+      "usage": {
+        "sessions": 1,
+        "reported": {
+          "input_tokens": 35186,
+          "cached_input_tokens": 0,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 531,
+          "reasoning_output_tokens": 402
+        }
+      },
+      "checks": [
+        {
+          "id": "whitespace",
+          "status": "pass"
+        },
+        {
+          "id": "openelis-authentication-smoke",
+          "status": "pass",
+          "executed": 3,
+          "assertions": [
+            {
+              "name": "default test administrator can authenticate",
+              "passed": true,
+              "httpStatus": 200
+            },
+            {
+              "name": "incorrect password is rejected",
+              "passed": true,
+              "httpStatus": 401,
+              "errorCode": "error.invalidcredentials"
+            },
+            {
+              "name": "frontend login document contains the application root",
+              "passed": true
+            }
+          ]
+        },
+        {
+          "id": "analyzer-result-contract",
+          "status": "pass",
+          "executed": 24,
+          "assertions": [
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.unsupportedValueCannotFallBackToRawEvidence",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.patientClassificationCannotContradictMatchedControlEvidence",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.rejectsLocalAnalyzerIdWhenExactBridgeConnectionIdIsAbsent",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.readsTheInstrumentReportedPatientFromTheObservationSubject",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.newContractDoesNotGuessAnInterpretationRoleFromItsCode",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.ignoresAPatientThatIsNotMarkedAsInstrumentReported",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.readsTheSharedVersion11FixtureWithExplicitRoles",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.readsTheInstrumentsFlagAssayAndOperatorAsSent",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.parsesBridgeRecognizedControlEvidence",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.parsesExactConnectionProfileAndRawPatientContext",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.rejectsAnUnknownRoleInsteadOfGuessingCallOrFlag",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.rejectsAContradictoryCanonicalAnswer",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.recognitionFingerprintIsOptionalAuditEvidence",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.explicitCallRoleDoesNotDependOnAStandardVocabulary",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.aResultWithoutAPatientCarriesNone",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.theStoredNumberIsTheQuantityNotTheRawText",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.preservesAnswerCodingsForBothQualitativeAndCombinedResults",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.aRunWithNoValueAndADataAbsentReasonIsAFailedRunCarryingTheInstrumentsNotes",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.aResultWithoutInstrumentProvenanceCarriesNone",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.aResultCannotClaimBothAValueAndAFailedRun",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.canonicalAnswerIsUsedWhileVendorTextRemainsEvidence",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.aWarningTheInstrumentRaisedAboutTheSampleIsAFlagNotAResult",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.rejectsANumericResultWithAHugeExponent",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            },
+            {
+              "name": "org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.aResultWithAValueIsNotAFailedRunAndCarriesNoNoteWhenNoneIsSent",
+              "passed": true,
+              "detail": "",
+              "report": "target/surefire-reports/TEST-org.openelisglobal.analyzerimport.service.AnalyzerNormalizedResultContractTest.xml"
+            }
+          ]
+        },
+        {
+          "id": "fhir-roundtrip",
+          "status": "pass",
+          "executed": 1,
+          "assertions": [
+            {
+              "name": "create_read_update_delete_organization",
+              "passed": true,
+              "detail": "",
+              "report": "target/code-qa/fhir-roundtrip.xml"
+            }
+          ]
+        }
+      ],
+      "reviewer": {
+        "schemaVersion": 1,
+        "head": "556f35d6708f28ec32659a9f25a5ab5e80c268a4",
+        "summary": "No actionable defects found for the selected question. Numbers come directly from the delivered quantity, and unsupported value types throw instead of using raw input. The 24 passing contract tests include numeric preservation and unsupported-value rejection. The synthetic FHIR check verifies only Organization operations.",
+        "coverage": "complete",
+        "omissions": [],
+        "findings": []
+      }
+    },
+    {
+      "runId": "c90dc30e-2feb-41f9-82de-ea908090e6b6",
+      "level": "L1",
+      "sourceHead": "5ccc2c3b4cce0cb798ce7d364754d7e4654d2556",
+      "application": "pr",
+      "question": "",
+      "model": "",
+      "reviewSeconds": 0,
+      "status": "complete",
+      "assessment": "no_findings",
+      "reasons": [],
+      "cleanup": "not-needed",
+      "usage": {
+        "sessions": 0,
+        "reported": null
+      },
+      "checks": [
+        {
+          "id": "whitespace",
+          "status": "pass"
+        }
+      ],
+      "reviewer": null
+    }
+  ],
+  "scope": "Harness integration acceptance; not current application stack clearance or a reviewer-quality benchmark. L2 findings were separately reproduced by failing tests and fixed. The corrected L5 run completed with 3 authentication assertions, 24 contract tests and a synthetic FHIR roundtrip all passing; one Sol session returned no findings for the selected question. Both isolated workers were removed.",
+  "followupFixCommit": "5ccc2c3b4cce0cb798ce7d364754d7e4654d2556",
+  "ci": "Implementation checks queued at documentation time; no GitHub CI success claim."
+}

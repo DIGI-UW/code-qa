@@ -1,0 +1,26 @@
+{
+  "name": "@digi-uw/code-qa",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "code-qa": "review/cli.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test tests/review/*.test.mjs",
+    "lint": "node scripts/validate-skills.mjs"
+  },
+  "files": [
+    "review/",
+    "skills/",
+    "docs/",
+    "examples/",
+    "install.mjs",
+    "README.md",
+    "LICENSE",
+    "!**/__pycache__/**"
+  ]
+}

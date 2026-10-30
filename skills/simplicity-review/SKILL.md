@@ -11,6 +11,8 @@ description: |
 
 # Simplicity Review (anti-bloat)
 
+Use the [shared review procedure](../review-change/SKILL.md) for requirement authority, evidence and legitimate code/test removal.
+
 Over-engineering is a signature failure mode of code-generating agents: asked for a
 registration form, an agent volunteers password reset, email verification, 2FA, and
 account deletion. YAGNI is under constant threat. This gate catches the surplus
@@ -64,6 +66,6 @@ avoid here is stripping a load-bearing abstraction down to under-engineering.
 ## Output contract
 - A findings list: each over-engineering instance with file:line + the concrete simpler form.
 - A verdict + a prioritized set of cuts (the simplest version that still meets the spec
-  and keeps the tests green).
+  and preserves the required behavior, updating or deleting obsolete tests).
 - Explicit "kept on purpose" notes for complexity that is essential (with the justification),
   so the review can't be mistaken for a push toward under-engineering.

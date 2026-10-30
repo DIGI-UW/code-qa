@@ -1,0 +1,338 @@
+{
+  "date": "2026-10-22",
+  "testedTools": {
+    "codex": "0.160.1",
+    "lima": "2.2.1",
+    "host": "macOS arm64",
+    "ciNode": "20"
+  },
+  "automated": {
+    "tests": 25,
+    "passed": 25,
+    "failed": 0,
+    "skills": 7,
+    "job": "https://github.com/DIGI-UW/code-qa/actions/runs/39862314818/job/120115805157"
+  },
+  "openelis": {
+    "runId": "cc5d1539-db9f-49b7-811e-fd808576bf51",
+    "head": "556f35d6708f28ec32659a9f25a5ab5e80c268a4",
+    "status": "complete",
+    "assessment": "no_findings",
+    "cleanup": "removed",
+    "checks": [
+      {
+        "id": "whitespace",
+        "status": "pass",
+        "evidence": "",
+        "paths": [
+          "docs/dev_setup.md"
+        ]
+      },
+      {
+        "id": "openelis-authentication-smoke",
+        "status": "pass",
+        "executed": 3,
+        "assertions": [
+          {
+            "name": "default test administrator can authenticate",
+            "passed": true,
+            "httpStatus": 200
+          },
+          {
+            "name": "incorrect password is rejected",
+            "passed": true,
+            "httpStatus": 401,
+            "errorCode": "error.invalidcredentials"
+          },
+          {
+            "name": "frontend login document contains the application root",
+            "passed": true
+          }
+        ],
+        "head": "556f35d6708f28ec32659a9f25a5ab5e80c268a4"
+      }
+    ],
+    "reviewQuestion": "Does the login guidance in docs/dev_setup.md conflict with the supplied authentication handlers or the authentication smoke evidence? Review only login guidance, not the remaining deployment instructions.",
+    "reviewer": {
+      "schemaVersion": 1,
+      "head": "556f35d6708f28ec32659a9f25a5ab5e80c268a4",
+      "summary": "No actionable conflict found. The supplied docs/dev_setup.md contains no application login guidance. The authentication handlers agree with the smoke evidence: successful API login returns success, and incorrect credentials return HTTP 401 with error.invalidcredentials. The smoke check passed all three recorded assertions.",
+      "coverage": "complete",
+      "omissions": [],
+      "findings": []
+    },
+    "usage": {
+      "sessions": 1,
+      "reported": {
+        "input_tokens": 23747,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 175,
+        "reasoning_output_tokens": 62
+      }
+    },
+    "finishedAt": "2026-10-22T22:13:49.843Z",
+    "submodules": {
+      "dataexport": "bc1c0d4967607743e3aea48fbd08be5a4d5daf95",
+      "tools/analyzer-mock-server": "88b51f7c5ed50e953b8e80be5934162bcb138fd9",
+      "tools/openelis-analyzer-bridge": "b9b518df67169848f64b726db66e1d4c46463e15"
+    },
+    "builtImageDigests": {
+      "oe2-source-a27aa60b-dev-analyzer-bridge": "sha256:77e6a349829fed61395724d41ffb9ad9d0eba1d69720d7ec658239c89a8120ba",
+      "oe2-source-a27aa60b-dev-frontend": "sha256:f91e82ba4f4911465384d92ee1fc74d30cca48b7cf63b93a9930c40e411cea39",
+      "oe2-source-a27aa60b-dev-backend": "sha256:3fd641a323c4ea4f24b6922d4d9728825700f8e1b9aa453797e4727cb7a9c9ef",
+      "oe2-source-a27aa60b-dev-analyzer-mock": "sha256:57061eacaa46d037ab54a27c05051aa4c0609152dd11e50e12dda8f279b1bc8a"
+    }
+  },
+  "isolation": {
+    "worker": "code-qa-cc5d1539-db9f-49b7-811e-fd808576bf51",
+    "configuredHostMounts": [],
+    "sharedFilesystems": [
+      {
+        "target": "/mnt/lima-rosetta",
+        "source": "vz-rosetta",
+        "fstype": "virtiofs",
+        "options": "rw,relatime"
+      }
+    ],
+    "ssh": {
+      "localPort": 0,
+      "loadDotSSHPubKeys": false,
+      "forwardAgent": false,
+      "forwardX11": false,
+      "forwardX11Trusted": false
+    },
+    "portForwards": [
+      {
+        "guestIPMustBeZero": false,
+        "guestIP": "0.0.0.0",
+        "guestPortRange": [
+          1,
+          65535
+        ],
+        "hostIP": "127.0.0.1",
+        "hostPortRange": [
+          1,
+          65535
+        ],
+        "proto": "any",
+        "ignore": true
+      }
+    ],
+    "guestListeners": {
+      "loopback": 49206,
+      "wildcard": 49207
+    },
+    "hostConnectionRefused": [
+      [
+        true,
+        true
+      ],
+      [
+        true,
+        true
+      ],
+      [
+        true,
+        true
+      ],
+      [
+        true,
+        true
+      ],
+      [
+        true,
+        true
+      ],
+      [
+        true,
+        true
+      ]
+    ],
+    "passed": true,
+    "hostDockerContext": "orbstack"
+  },
+  "cancellation": {
+    "id": "80370aaf-51c0-48d6-a73a-09411d82c427",
+    "status": "cancelled",
+    "cleanup": "removed",
+    "shellStarted": true,
+    "ownWorkerRemoved": true,
+    "primaryWorkerPreserved": true,
+    "reasons": [
+      "Evidence collection: openelis-evidence: exit 1",
+      "openelis-start: cancelled"
+    ],
+    "testScope": "Real Lima worker and long-running SSH shell fixture; no second application build."
+  },
+  "controlledModelCases": [
+    {
+      "runId": "52b34f68-b42d-476b-9b27-f43e135e77ca",
+      "base": "97f46ae273485416ab903e75b2d99fda60bb4ff1",
+      "head": "ff05d23dadc1fb1d9b4e28c3d974f37ab2110ff1",
+      "question": "Does the revised display preserve the amount emitted by the producer?",
+      "requirements": "The producer owns parsing incoming amount text and emits integer cents. The display consumes integer cents and displays the same amount with two decimal places. Changing the representation or interpreting input text in the consumer is outside this change. Review the revised display and its existing producer for correctness.\n",
+      "files": [
+        {
+          "path": "display.mjs",
+          "side": "base",
+          "revision": "97f46ae273485416ab903e75b2d99fda60bb4ff1",
+          "text": "export function displayAmount(record) {\n  return (record.amountCents / 100).toFixed(2);\n}\n"
+        },
+        {
+          "path": "display.mjs",
+          "side": "head",
+          "revision": "ff05d23dadc1fb1d9b4e28c3d974f37ab2110ff1",
+          "text": "export function displayAmount(record) {\n  const normalized = record.amountCents / 100;\n  return (normalized / 100).toFixed(2);\n}\n"
+        },
+        {
+          "path": "producer.mjs",
+          "side": "base",
+          "revision": "97f46ae273485416ab903e75b2d99fda60bb4ff1",
+          "text": "export function normalizeAmount(text) {\n  return { amountCents: Math.round(Number(text.replace(\",\", \".\")) * 100) };\n}\n"
+        },
+        {
+          "path": "producer.mjs",
+          "side": "head",
+          "revision": "ff05d23dadc1fb1d9b4e28c3d974f37ab2110ff1",
+          "text": "export function normalizeAmount(text) {\n  return { amountCents: Math.round(Number(text.replace(\",\", \".\")) * 100) };\n}\n"
+        }
+      ],
+      "model": "gpt-6.1-sol",
+      "billingMode": "subscription",
+      "usage": {
+        "sessions": 1,
+        "reported": {
+          "input_tokens": 10014,
+          "cached_input_tokens": 0,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 434,
+          "reasoning_output_tokens": 43
+        }
+      },
+      "status": "complete",
+      "assessment": "findings",
+      "reviewer": {
+        "schemaVersion": 1,
+        "head": "ff05d23dadc1fb1d9b4e28c3d974f37ab2110ff1",
+        "summary": "The revised display divides integer cents by 100 twice, so it does not preserve the producer's amount.",
+        "coverage": "complete",
+        "omissions": [],
+        "findings": [
+          {
+            "title": "Remove the second division by 100",
+            "consequence": "The producer converts input text to integer cents. The display now divides those cents by 10,000 overall: input \"123.45\" produces 12345 cents but displays \"1.23\" instead of \"123.45\". Keep only one conversion from cents before formatting.",
+            "owner": "display.mjs",
+            "severity": "medium",
+            "evidence": [
+              {
+                "kind": "source",
+                "path": "producer.mjs",
+                "side": "head",
+                "line": 2,
+                "checkId": "",
+                "quote": "  return { amountCents: Math.round(Number(text.replace(\",\", \".\")) * 100) };"
+              },
+              {
+                "kind": "source",
+                "path": "display.mjs",
+                "side": "head",
+                "line": 2,
+                "checkId": "",
+                "quote": "  const normalized = record.amountCents / 100;"
+              },
+              {
+                "kind": "source",
+                "path": "display.mjs",
+                "side": "head",
+                "line": 3,
+                "checkId": "",
+                "quote": "  return (normalized / 100).toFixed(2);"
+              }
+            ]
+          }
+        ]
+      },
+      "fixtureProvenance": "Constructed local Git fixture; file contents are included. Executed during v0.1 development before the final worker fixes."
+    },
+    {
+      "runId": "719df90f-e976-422f-9842-35ae3f2a4acd",
+      "base": "91fba5b411d06dd437846575a4f19a19effcecd9",
+      "head": "6f43e77dfa365722e10b9c9dc8266184aef552d5",
+      "question": "",
+      "requirements": "Approved target: remove the unused legacy parser and its obsolete test. The producer is the sole owner of amount parsing; the display consumes canonical integer cents. There are no remaining callers of legacyParse in this fixture. Preserve the current producer/display behavior. No compatibility fallback is required.\n",
+      "files": [
+        {
+          "path": "legacy-parser.mjs",
+          "side": "base",
+          "revision": "91fba5b411d06dd437846575a4f19a19effcecd9",
+          "text": "export function legacyParse(text) { return Number(text); }\n"
+        },
+        {
+          "path": "legacy-parser.test.mjs",
+          "side": "base",
+          "revision": "91fba5b411d06dd437846575a4f19a19effcecd9",
+          "text": "import assert from \"node:assert/strict\";\nimport { legacyParse } from \"./legacy-parser.mjs\";\nassert.equal(legacyParse(\"12.5\"), 12.5);\n"
+        },
+        {
+          "path": "producer.mjs",
+          "side": "base",
+          "revision": "91fba5b411d06dd437846575a4f19a19effcecd9",
+          "text": "export function normalizeAmount(text) {\n  return { amountCents: Math.round(Number(text.replace(\",\", \".\")) * 100) };\n}\n"
+        },
+        {
+          "path": "producer.mjs",
+          "side": "head",
+          "revision": "6f43e77dfa365722e10b9c9dc8266184aef552d5",
+          "text": "export function normalizeAmount(text) {\n  return { amountCents: Math.round(Number(text.replace(\",\", \".\")) * 100) };\n}\n"
+        },
+        {
+          "path": "display.mjs",
+          "side": "base",
+          "revision": "91fba5b411d06dd437846575a4f19a19effcecd9",
+          "text": "export function displayAmount(record) {\n  return (record.amountCents / 100).toFixed(2);\n}\n"
+        },
+        {
+          "path": "display.mjs",
+          "side": "head",
+          "revision": "6f43e77dfa365722e10b9c9dc8266184aef552d5",
+          "text": "export function displayAmount(record) {\n  return (record.amountCents / 100).toFixed(2);\n}\n"
+        }
+      ],
+      "model": "gpt-6.1-sol",
+      "billingMode": "subscription",
+      "usage": {
+        "sessions": 1,
+        "reported": {
+          "input_tokens": 10144,
+          "cached_input_tokens": 0,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 120,
+          "reasoning_output_tokens": 26
+        }
+      },
+      "status": "complete",
+      "assessment": "no_findings",
+      "reviewer": {
+        "schemaVersion": 1,
+        "head": "6f43e77dfa365722e10b9c9dc8266184aef552d5",
+        "summary": "No actionable findings. Removing the unused legacy parser and its obsolete test matches the approved purpose. The producer retains amount parsing, and the display continues consuming integer cents; both are unchanged.",
+        "coverage": "complete",
+        "omissions": [],
+        "findings": []
+      },
+      "fixtureProvenance": "Constructed local Git fixture; file contents are included. Executed during v0.1 development before the final worker fixes."
+    }
+  ],
+  "limits": [
+    "Integration acceptance, not a model-quality benchmark or live-PR pilot.",
+    "OpenELIS HTTP/authentication smoke only; no complete browser or application test suite.",
+    "Linux host, other model adapters, hostile-code penetration testing and automated publication not validated.",
+    "Raw build/process/model logs remain in the local durable run directories; this record contains selected evidence."
+  ],
+  "combinedRunHarnessCodeCommit": "6a7c913353f4dbd6d918178b18f348c184061070",
+  "finalCleanupObserved": {
+    "remainingReviewWorkers": 0,
+    "hostDockerContext": "orbstack"
+  }
+}
