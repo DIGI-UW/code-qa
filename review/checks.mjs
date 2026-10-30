@@ -1,3 +1,4 @@
+import { validateArtifactSpecs } from './artifacts.mjs';
 import { sourcePath } from './snapshot.mjs';
 export function validateChecks(checks) {
   if (!Array.isArray(checks) || checks.length > 20) throw new Error('checks must be an array of at most 20 checks');
@@ -10,6 +11,7 @@ export function validateChecks(checks) {
     if (!Number.isInteger(check.timeoutSeconds) || check.timeoutSeconds < 1 || check.timeoutSeconds > 3600) throw new Error('Check timeout must be 1..3600 seconds');
     if (!Array.isArray(check.reports) || (check.kind !== 'command' && !check.reports.length)) throw new Error('Check needs JUnit XML report patterns');
     for (const path of check.reports) sourcePath(path);
+    validateArtifactSpecs(check.artifacts);
     if (check.cwd) sourcePath(check.cwd);
   }
   return checks;

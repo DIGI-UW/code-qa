@@ -1,0 +1,11 @@
+{
+  "date": "2026-10-30",
+  "scope": "Runtime and product evidence implementation; not complete roadmap acceptance",
+  "source": "965d6d10559d9e11e8868cbc01a5157864056af9",
+  "workerRun": "4fc4fe91-9c62-425c-9a8b-f7fb8f5a8caa",
+  "runtime": {"loadedComponentsVerified": 5, "method": "Running image IDs and deployed Java class bytes compared with built artifacts"},
+  "workflow": {"name": "Label preset edit", "executed": 1, "status": "pass", "evidenceDirectory": "workflow-owned", "assertions": ["System name locked", "Height increment saved and read back", "Width, name and field selection preserved"], "artifacts": ["before screenshot", "after screenshot", "persisted readback", "browser trace", "browser errors"]},
+  "negativeControls": ["stale loaded component", "stale screenshot removed before execution", "altered artifact bytes", "missing saved-state evidence", "draft design cannot establish approved acceptance", "visible workflow deviation"],
+  "liveL3": {"run": "281d0189-0199-411d-bf6e-818ccf94ce80", "status": "complete", "assessment": "no_findings", "model": "gpt-6.1-sol", "reasoning": "low", "seconds": 120, "sessions": 1, "approvedRemovalRespected": true},
+  "limitations": ["Available OpenELIS design is draft; approved design acceptance remains unconfirmed", "Only selected synthetic workflow tested; not whole-product acceptance", "Probe executor mutates isolated source copies, not a second deployed full stack", "Artifacts limited to 20 MiB each and 40 MiB per check; larger media are explicit gaps"]
+}

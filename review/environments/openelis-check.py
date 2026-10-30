@@ -1,6 +1,7 @@
 # Trusted runner copied into the disposable worker, never imported from PR code.
 import base64
 import glob
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -21,6 +22,11 @@ def execute_check(spec, root, head, dev_stack=True):
     def reports():
         return sorted({owned(p) for pattern in spec["reports"]
                        for p in glob.glob(str(root / pattern), recursive=True)})
+    def artifact_paths():
+        return [(owned(p), a["kind"]) for a in spec.get("artifacts", [])
+                for p in glob.glob(str(root / a["path"]), recursive=True)]
+    for path, kind in artifact_paths():
+        path.unlink()
     # A previous build/test's reports cannot establish this invocation's outcome.
     for path in reports():
         path.unlink()
@@ -53,15 +59,26 @@ def execute_check(spec, root, head, dev_stack=True):
                 os.killpg(process.pid, signal.SIGKILL)
                 process.wait()
             code = process.returncode
+    artifacts, artifact_gaps = [], []
+    artifact_bytes = 0
+    for declared in spec.get("artifacts", []):
+        matching=[(p,k) for p,k in artifact_paths() if k == declared["kind"] and p.match(declared["path"])]
+        if not matching:artifact_gaps.append("Missing artifact: " + declared["path"])
+        for path,kind in matching:
+            data=path.read_bytes()
+            if not data or len(data)>20*1024*1024 or artifact_bytes + len(data)>40*1024*1024:
+                artifact_gaps.append("Empty or oversized artifact: " + str(path.relative_to(root)));continue
+            artifact_bytes += len(data)
+            artifacts.append({"path":str(path.relative_to(root)),"kind":kind,"sha256":hashlib.sha256(data).hexdigest(),"base64":base64.b64encode(data).decode()})
     def inconclusive(outcome, reason):
         return {"id": spec["id"], "kind": spec["kind"], "head": head, "status": "error", "outcome": outcome,
                 "executed": 0, "measure": "test cases", "exitCode": code, "assertions": [], "reason": reason,
-                "logTail": log.read_text(errors="replace")[-4000:]}
+                "artifacts": artifacts, "artifactGaps": artifact_gaps, "logTail": log.read_text(errors="replace")[-4000:]}
     if timed_out:
         return inconclusive("timeout", "Check timed out; behavior unverified")
     if spec["kind"] == "command":
         return {"id": spec["id"], "kind": "command", "head": head, "executed": 1,
-                "outcome": "command-pass" if code == 0 else "command-failure", "measure": "commands", "exitCode": code, "status": "pass" if code == 0 else "fail",
+                "outcome": "command-pass" if code == 0 else "command-failure", "artifacts": artifacts, "artifactGaps": artifact_gaps, "measure": "commands", "exitCode": code, "status": "pass" if code == 0 else "fail",
                 "assertions": [{"name": "command exit status", "passed": code == 0}],
                 "logTail": log.read_text(errors="replace")[-4000:], "argv": spec["argv"]}
     assertions, skipped = [], 0
@@ -92,6 +109,7 @@ def execute_check(spec, root, head, dev_stack=True):
     infrastructure = any(a["outcome"] == "infrastructure-error" for a in assertions)
     return {"id": spec["id"], "kind": spec["kind"], "head": head, "executed": len(assertions),
             "outcome": "infrastructure-error" if infrastructure else "pass" if code == 0 and all(a["passed"] for a in assertions) else "assertion-failure",
+            "artifacts": artifacts, "artifactGaps": artifact_gaps,
             "rawReports": [{"path": str(p.relative_to(root)), "format": "junit", "text": p.read_text()} for p in found],
             "measure": "test cases", "skipped": skipped, "exitCode": code, "assertions": assertions,
             "status": "error" if infrastructure else "pass" if code == 0 and all(a["passed"] for a in assertions) else "fail",

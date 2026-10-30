@@ -1,8 +1,11 @@
+import {assessRuntime,assessScenarios} from './runtime.mjs';
+import {assessAcceptance} from './acceptance.mjs';
+import {persistArtifacts,captureDesigns} from './artifacts.mjs';
 import { validateProbeResult } from './probes.mjs';
 import { identifyFindings, reconcileHistory } from './history.mjs';
 import { decisionGaps } from './decisions.mjs';
 import { ContainerEnvironment } from './environments/container.mjs';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile,readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { command, requireSuccess } from './process.mjs';
 import { packetFor, isFresh, captureSourceEvidence } from './snapshot.mjs';
@@ -20,7 +23,7 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
   await mkdir(outputRoot, { recursive: true, mode: 0o700 });
   await mkdir(directory, { mode: 0o700 }); // Never overwrite a prior run/evidence.
   const run = { schemaVersion: 1, harnessVersion: '0.4.0', nodeVersion: process.version, plan, status: 'partial', assessment: 'undetermined', phase: 'prepare',
-    checks: [], probes: [], reasons: [], cleanup: 'not-needed', usage: { sessions: 0, reported: null }, reviewer: null };
+    checks: [], probes: [], artifacts:[], designs:[], reasons: [], cleanup: 'not-needed', usage: { sessions: 0, reported: null }, reviewer: null };
   const save = async () => {
     await writeFile(join(directory, 'result.json'), JSON.stringify(run, null, 2) + '\n', { mode: 0o600 });
     await writeFile(join(directory, 'report.md'), renderReport(run), { mode: 0o600 });
@@ -37,6 +40,7 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
       error.kind = 'partial'; throw error;
     }
     packet = await packetFor(plan);
+    run.designs=await captureDesigns(plan.designs ?? [],directory);
     await writeFile(join(directory, 'packet.json'), JSON.stringify(packet, null, 2) + '\n', { mode: 0o600 });
     await phase('mechanical');
     const diff = await command(['git', '--no-pager', '--literal-pathspecs', '-C', plan.snapshot.repo, 'diff', '--no-ext-diff', '--no-textconv', '--check',
@@ -55,6 +59,9 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
         for (const spec of plan.checks) {
           await phase('check-' + spec.id);
           const result = validateCheckResult(await environment.runCheck(spec, signal), spec, plan.snapshot.head);
+          run.artifacts.push(...await persistArtifacts(result,directory,plan.snapshot.head));
+          run.reasons.push(...(result.artifactGaps ?? []));
+          if(result.artifacts)result.artifacts=result.artifacts.map(({base64,...a})=>a);
           run.checks.push(result);
         }
         for (const probe of plan.probes ?? []) {
@@ -64,6 +71,12 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
           if (!['detected','inapplicable'].includes(result.outcome)) run.reasons.push('Probe ' + probe.id + ': ' + result.outcome);
         }
       }
+    }
+    if(plan.requiredEvidence.includes('runtime-identity')) {
+      if(environment.runtimeIdentity)run.runtime=await environment.runtimeIdentity(signal);
+      else {const evidence=run.artifacts.find(a=>a.kind==='runtime' && a.checkId===plan.runtimeCheckId);if(evidence)run.runtime=JSON.parse(await readFile(evidence.path,'utf8'));}
+      const assessed=assessRuntime(run.runtime,plan.snapshot.head);run.runtimeAssessment=assessed;run.reasons.push(...assessed.reasons);
+      run.reasons.push(...assessScenarios(plan.scenarios,run.checks));
     }
     if (signal?.aborted) { const e = new Error('Run cancelled'); e.kind = 'cancelled'; throw e; }
     if (plan.adapter !== 'none') {
@@ -78,7 +91,7 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
         if(round) await mkdir(roundDirectory,{mode:0o700});
         run.usage.sessions++;
         reviewed = await (reviewer ?? reviewerAdapter(plan.adapter).review)({...plan,reviewSeconds:seconds},
-          {...packet,probes:run.probes,previousAssessment:reviewed?.report ?? null,experimentCatalog:(plan.experiments ?? []).map(c=>({id:c.id,kind:c.kind,argv:c.argv}))},run.checks,roundDirectory,signal);
+          {...packet,probes:run.probes,runtime:run.runtime,artifacts:run.artifacts,designs:run.designs,workflows:plan.workflows ?? [],scenarios:plan.scenarios ?? [],previousAssessment:reviewed?.report ?? null,experimentCatalog:(plan.experiments ?? []).map(c=>({id:c.id,kind:c.kind,argv:c.argv}))},run.checks,roundDirectory,signal);
         validateSchema(reviewed.report,reviewerSchema);
         run.usage.rounds ??= [];run.usage.rounds.push(reviewed.usage ?? null);
         const requests=reviewed.report.requestedChecks ?? [];
@@ -91,7 +104,10 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
           }
           requested.add(spec.id);
           await phase('experiment-'+spec.id);
-          run.checks.push(validateCheckResult(await environment.runCheck(spec,signal),spec,plan.snapshot.head));
+          const result=validateCheckResult(await environment.runCheck(spec,signal),spec,plan.snapshot.head);
+          run.artifacts.push(...await persistArtifacts(result,directory,plan.snapshot.head));run.reasons.push(...(result.artifactGaps ?? []));
+          if(result.artifacts)result.artifacts=result.artifacts.map(({base64,...a})=>a);
+          run.checks.push(result);
         }
       }
       validateSchema(reviewed.report, reviewerSchema);
@@ -110,6 +126,7 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
       run.reasons.push(...run.history.rounds.filter(r => r.head === plan.snapshot.head && r.status === 'unverified').map(r => 'Prior finding unverified: ' + r.id));
       run.reasons.push(...decisionGaps(plan.decisions ?? []), ...(plan.pullRequest?.conversation?.gaps ?? []));
       await writeFile(join(directory,'packet.json'),JSON.stringify(packet,null,2)+'\n',{mode:0o600});
+      if(plan.requiredEvidence.includes('product-acceptance')) {run.acceptance=assessAcceptance(plan.workflows,run.reviewer,run.checks,run.artifacts,run.designs);run.reasons.push(...run.acceptance.gaps);}
       run.inspection = reviewed.inspection ?? null;
       run.adapterDiagnostics = reviewed.diagnostics ?? [];
       run.reasons.push(...coverageGaps(run.reviewer),...verificationGaps(run.reviewer,plan,run.checks,run.probes));
@@ -119,7 +136,7 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
     if (plan.adapter !== 'none') run.reasons.push(...packet.omissions);
     run.reasons.push(...run.checks.filter(c=>c.status==='error').map(c=>'Check '+c.id+': '+c.outcome));
     run.status = run.reasons.length || run.cleanup === 'failed' ? 'partial' : 'complete';
-    const hasFindings = run.checks.some(c => c.status === 'fail') || Boolean(actionableFindings(run.reviewer).length);
+    const hasFindings = Boolean(run.acceptance?.deviations.length) || run.runtimeAssessment?.status==='fail' || run.checks.some(c => c.status === 'fail') || Boolean(actionableFindings(run.reviewer).length);
     run.assessment = hasFindings ? 'findings' : run.status === 'complete' ? 'no_findings' : 'undetermined';
   } catch (error) { failed(error); if (run.checks.some(c => c.status === 'fail')) run.assessment = 'findings'; }
   if(environment) {

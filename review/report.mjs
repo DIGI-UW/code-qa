@@ -56,6 +56,10 @@ reviewerSchema.properties.behaviors = {type:'array',items:{type:'object',additio
 reviewerSchema.properties.requestedChecks = {type:'array',items:{type:'object',additionalProperties:false,
   properties:{id:{type:'string'},reason:{type:'string'},falsifies:{type:'string'}},required:['id','reason','falsifies'],
 }};
+reviewerSchema.properties.acceptance={type:'array',items:{type:'object',additionalProperties:false,
+  properties:{...Object.fromEntries(['id','reason','observedOutcome','persistedOutcome','designId','designComparison'].map(k=>[k,{type:'string'}])),status:{type:'string',enum:['pass','fail','unverified']},artifactIds:{type:'array',items:{type:'string'}}},
+  required:['id','status','reason','observedOutcome','persistedOutcome','designId','designComparison','artifactIds'],
+}};
 export function verificationGaps(report, plan, checks, probes) {
   if (!plan.requiredEvidence.includes('test-strength')) return [];
   const gaps=[];
@@ -64,7 +68,7 @@ export function verificationGaps(report, plan, checks, probes) {
     if(['out-of-scope','inapplicable'].includes(b.scope)) {if(!b.applicabilityReason?.trim())gaps.push('Missing scope rationale: '+b.behavior);continue;}
     if(!b.behavior.trim() || !b.requirement.trim() || !b.layer.trim() || !b.assertion.trim()) gaps.push('Incomplete behavior-to-test assessment');
     if(b.gapStatus!=='none') gaps.push(b.behavior+': '+(b.gap || 'Unresolved verification gap'));
-    if(!checks.some(c=>c.id===b.checkId && c.kind==='test' && c.executed>0 && ['pass','fail'].includes(c.status))) gaps.push('Behavior lacks executed test: '+b.behavior);
+    if(!checks.some(c=>c.id===b.checkId && ['test','scenario'].includes(c.kind) && c.executed>0 && ['pass','fail'].includes(c.status))) gaps.push('Behavior lacks executed test: '+b.behavior);
     if(!probes.some(p=>p.id===b.probeId && ['detected','inapplicable'].includes(p.outcome))) gaps.push('Behavior lacks test-strength evidence: '+b.behavior);
   }
   return gaps;

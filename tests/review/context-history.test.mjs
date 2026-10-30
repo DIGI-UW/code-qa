@@ -65,7 +65,7 @@ test('reviewer conformance advertises actual capabilities independently of model
   assert.equal(typeof adapter.review,'function');
   adapter.validate({model:'operator-selected-model',reasoningEffort:'low'});
   assert.equal(adapter.capabilities.source,true);
-  assert.equal(adapter.capabilities.images,false);
+  assert.equal(adapter.capabilities.images,true);
   assert.equal(adapter.capabilities.cancellation,true);
   assert.equal(adapter.capabilities.hardCurrencyLimit,false);
 });

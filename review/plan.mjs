@@ -1,3 +1,6 @@
+import {readFile} from 'node:fs/promises';
+import {digest} from './artifacts.mjs';
+import {validateScenarios,validateWorkflows} from './acceptance.mjs';
 import { validateSources } from './sources.mjs';
 import { validateProbes } from './probes.mjs';
 import { validateDecisions } from './decisions.mjs';
@@ -35,6 +38,8 @@ export function validatePlan(plan) {
   for (const path of [...plan.paths, ...plan.contextPaths]) sourcePath(path);
   if (typeof plan.snapshot.repo !== 'string' || !plan.snapshot.repo.startsWith('/')) throw new Error('Repository must be absolute');
   if (typeof plan.purpose !== 'string' || typeof plan.requirements !== 'string') throw new Error('Invalid purpose/requirements');
+  validateScenarios(plan.scenarios ?? [],plan.checks);
+  validateWorkflows(plan.workflows ?? [],plan.checks,plan.designs ?? []);
   validateSources(plan.sources ?? []);
   integer(plan.historyDepth ?? 1,'historyDepth',1,1000);
   validateDecisions(plan.decisions ?? []);
@@ -44,7 +49,7 @@ export function validatePlan(plan) {
   validateChecks(plan.experiments ?? []);
   integer(plan.maxRounds ?? 0,'maxRounds',0,2);
   validateProbes(plan.probes ?? [],plan.checks);
-  if (plan.probes?.length && plan.environment !== 'container') throw new Error('Probes currently require the isolated container executor');
+  if (plan.probes?.length && !['container','openelis'].includes(plan.environment)) throw new Error('Probes require an isolated executor');
   if (plan.experiments?.length && plan.environment === 'none') throw new Error('Experiments require isolated execution');
   if (new Set([...plan.checks,...(plan.experiments ?? [])].map(c=>c.id)).size !== plan.checks.length+(plan.experiments?.length ?? 0)) throw new Error('Check and experiment IDs must be unique');
   if (plan.checks.length && plan.environment === 'none') throw new Error('Executable checks require an isolated environment');
@@ -67,7 +72,7 @@ export async function createPlan(options) {
     rigor: ai ? 'standard' : 'mechanical', adapter: options.adapter ?? (ai ? 'codex' : 'none'), environment: options.environment ?? 'none',
     model: options.model ?? (ai ? defaults.model : ''), billingMode: options.billingMode ?? 'unknown', maxSessions: ai ? 1 + (options.maxRounds ?? 0) : 0, maxRounds: options.maxRounds ?? 0,
     reviewSeconds: options.reviewSeconds ?? (ai ? defaults.reviewSeconds : 0), startupSeconds: options.startupSeconds ?? 3600,
-    sources:options.sources ?? [],historyDepth:options.historyDepth ?? 1, checks: options.checks ?? [], probes: options.probes ?? [], experiments:options.experiments ?? [], image: options.image ?? 'node:22-bookworm',
+    scenarios:options.scenarios ?? [],workflows:options.workflows ?? [],designs:await Promise.all((options.designs ?? []).map(async d=>({...d,sha256:digest(await readFile(d.file))}))), runtimeCheckId:options.runtimeCheckId ?? '', sources:options.sources ?? [],historyDepth:options.historyDepth ?? 1, checks: options.checks ?? [], probes: options.probes ?? [], experiments:options.experiments ?? [], image: options.image ?? 'node:22-bookworm',
     decisions: options.decisions ?? [], history: options.history ?? null,
     contextNotes: options.contextNotes ?? [], pullRequest: options.pullRequest ?? null,
     overrides: Object.fromEntries(['model','reviewSeconds','startupSeconds','reasoningEffort']

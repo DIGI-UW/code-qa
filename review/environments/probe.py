@@ -21,7 +21,7 @@ def execute_probe(probe, spec, root, head, dev_stack=False):
     result["fixedTestsPreserved"] = True
     with tempfile.TemporaryDirectory(prefix="code-qa-probe-") as directory:
         pristine = Path(directory) / "pristine"
-        shutil.copytree(root, pristine, symlinks=True, ignore=shutil.ignore_patterns(".git"))
+        shutil.copytree(root, pristine, symlinks=True, ignore=shutil.ignore_patterns(".git", "node_modules", "target", "test-results", "playwright-report"))
         for phase in ["baseline", "mutant", "restored"]:
             variant = Path(directory) / phase
             shutil.copytree(pristine, variant, symlinks=True)
