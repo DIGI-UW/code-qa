@@ -139,6 +139,9 @@ export function renderReport(run) {
     `Environment: ${run.plan.environment}. Reviewer: ${run.plan.adapter}.`, '', '## Required evidence', '', ...run.plan.requiredEvidence.map(x => '- ' + x), '', '## Checks', ''];
   for (const check of run.checks) lines.push(`- ${check.id}: ${check.status}${check.executed !== undefined ? ` (${check.executed} ${check.measure ?? 'assertions'})` : ''}`);
   if(run.probes?.length) lines.push('', '## Test-strength probes', '', ...run.probes.map(p=>'- '+p.id+': '+p.outcome+(p.reason?' — '+p.reason:'')));
+  if(run.runtimeAssessment) lines.push('', '## Loaded runtime', '', run.runtimeAssessment.status, ...run.runtimeAssessment.reasons.map(r=>'- '+r));
+  if(run.artifacts?.length) lines.push('', '## Retained evidence', '', ...run.artifacts.map(a=>'- '+a.id+' ('+a.kind+'): '+a.path));
+  if(run.acceptance) lines.push('', '## Product acceptance', '', ...run.acceptance.deviations.map(d=>'- Deviation: '+d),...run.acceptance.gaps.map(g=>'- Unverified: '+g));
   if (run.reviewer) {
     if(run.reviewer.behaviors?.length) lines.push('', '## Behavior and test coverage', '', ...run.reviewer.behaviors.map(b=>'- '+b.behavior+' ['+(b.scope ?? 'in-scope')+']: '+b.layer+'; test '+(b.test || 'missing')+'; assertion '+b.assertion+(b.gap?' — Gap: '+b.gap:'')));
     lines.push('', '## Reviewer assessment', '', run.reviewer.summary);

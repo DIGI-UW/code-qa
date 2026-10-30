@@ -118,7 +118,7 @@ export async function runReview(plan, outputRoot, { signal, reviewer,
         await captureSourceEvidence(evidenceReport, packet);
         validateReviewer(evidenceReport, packet, run.checks);
       }
-      run.reviewer = validateReviewer(reviewed.report, packet, run.checks); run.usage.reported = reviewed.usage;
+      run.reviewer = validateReviewer(reviewed.report, packet, run.checks); run.usage.reported = Object.fromEntries([...new Set(run.usage.rounds.flatMap(r=>Object.keys(r??{})))].filter(k=>run.usage.rounds.every(r=>typeof r?.[k]==='number')).map(k=>[k,run.usage.rounds.reduce((sum,r)=>sum+r[k],0)]));
       const repository = plan.pullRequest?.repository ?? plan.snapshot.repo;
       run.findings = identifyFindings(run.reviewer, repository, plan.snapshot.head);
       run.history = reconcileHistory(plan.history, run.reviewer, run.findings, repository, plan.snapshot.head);

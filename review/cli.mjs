@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import {importReport,publication} from './exchange.mjs';
 import { parseArgs } from 'node:util';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { resolve, dirname, join } from 'node:path';
@@ -15,6 +16,8 @@ import { capabilityGaps } from './reviewers/index.mjs';
 
 const help = `code-qa v0.4
   levels
+  import --plan FILE --external FILE --out FILE
+  publish --result FILE --finding ID --verified ID [repeat IDs] [--authorize-publication]
   plan   --pr https://github.com/OWNER/REPO/pull/NUMBER --level L1..L5 [options] --out plan.json
   review --pr URL --level L1..L5 [options] [--out /durable/runs]
   plan/review --repo PATH --base REF --head REF [options]
@@ -26,7 +29,7 @@ Options:
   --path PATH (repeatable) --context FILE (repeatable)
   --requirements FILE --config FILE --environment none|openelis|container --image IMAGE
   --decisions FILE --history FILE --scenarios FILE --workflows FILE --designs FILE --runtime-check ID --sources FILE --history-depth N --probes FILE --experiments FILE --max-rounds 0..2
-  --profile development --adapter codex --model MODEL_ID --billing-mode subscription|api|unknown
+  --profile development --adapter codex|claude --model MODEL_ID --billing-mode subscription|api|unknown
   --review-seconds N --reasoning-effort low|medium|high
   --startup-seconds N --checks FILE
 Config/check files are explicit trusted operator inputs, not PR instructions.
@@ -39,12 +42,12 @@ The development profile uses one inexpensive Sol session by default; --max-round
 No automatic retry or model upgrade. Provider-specific model availability still applies.
 --config overrides the repository's .code-qa.json read from the base revision.
 Legacy --rigor mechanical|standard aliases map to L1/L3.
-Reports are local; nothing is repaired, posted, pushed or merged.
+Reviews stay local. Only explicit publish --authorize-publication posts selected, operator-verified findings; no repair, push or merge.
 Exit 0: execution complete (may include findings); 2: partial/error; 3: stale/cancelled.
 `;
 try {
   const { values: v, positionals } = parseArgs({ allowPositionals: true, strict: true, options: {
-    help: { type:'boolean' }, pr:{type:'string'}, repo:{type:'string'}, base:{type:'string'}, head:{type:'string'},
+    external:{type:'string'},result:{type:'string'},finding:{type:'string',multiple:true},verified:{type:'string',multiple:true},'authorize-publication':{type:'boolean'},help: { type:'boolean' }, pr:{type:'string'}, repo:{type:'string'}, base:{type:'string'}, head:{type:'string'},
     out:{type:'string'}, plan:{type:'string'}, run:{type:'string'}, level:{type:'string'}, lens:{type:'string'},
     application:{type:'string'}, question:{type:'string'}, purpose:{type:'string'}, requirements:{type:'string'},
     path:{type:'string',multiple:true}, context:{type:'string',multiple:true},
@@ -56,6 +59,15 @@ try {
   if (v.help || !action) { console.log(help); process.exit(0); }
   if (positionals.length !== 1) throw new Error('Expected one command');
   if (action === 'levels') { console.log(JSON.stringify(LEVELS,null,2)); process.exit(0); }
+  if(action==='import') {
+    if(!v.plan||!v.external||!v.out)throw new Error('import requires --plan, --external and --out');
+    const result=await importReport(JSON.parse(await readFile(v.external,'utf8')),JSON.parse(await readFile(v.plan,'utf8')));
+    await writeFile(resolve(v.out),JSON.stringify(result,null,2)+'\n',{flag:'wx',mode:0o600});console.log('Imported with external origin; execution remains unverified');process.exit(0);
+  }
+  if(action==='publish') {
+    if(!v.result)throw new Error('publish requires --result');
+    console.log(JSON.stringify(await publication(JSON.parse(await readFile(v.result,'utf8')),{ids:v.finding,verifiedIds:v.verified,authorize:!!v['authorize-publication']}),null,2));process.exit(0);
+  }
   let plan;
   if (['plan','review'].includes(action)) {
     resolveLevel(v); // Reject unknown levels before network or any model use.

@@ -62,6 +62,7 @@ export async function createPlan(options) {
   const profile = options.profile ?? 'development';
   if (!Object.hasOwn(PROFILES, profile)) throw new Error('Unknown execution profile');
   const defaults = PROFILES[profile];
+  if(ai && options.adapter==='claude' && !options.model)throw new Error('Select a Claude model explicitly; the development profile default is Codex-specific');
   const plan = {
     schemaVersion: 4, profile, requiredEvidence: [...preset.evidence], presetVersion: PRESET_VERSION, id: randomUUID(), createdAt: new Date().toISOString(),
     snapshot: await snapshot(options.repo, options.base, options.head),
