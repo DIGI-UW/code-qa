@@ -24,7 +24,8 @@ const help = `code-qa v0.4
 Options:
   --application pr|targeted --question TEXT --lens TEXT
   --path PATH (repeatable) --context FILE (repeatable)
-  --requirements FILE --config FILE --environment none|openelis
+  --requirements FILE --config FILE --environment none|openelis|container --image IMAGE
+  --decisions FILE --history FILE
   --profile development --adapter codex --model MODEL_ID --billing-mode subscription|api|unknown
   --review-seconds N --reasoning-effort low|medium|high
   --startup-seconds N --checks FILE
@@ -47,7 +48,7 @@ try {
     out:{type:'string'}, plan:{type:'string'}, run:{type:'string'}, level:{type:'string'}, lens:{type:'string'},
     application:{type:'string'}, question:{type:'string'}, purpose:{type:'string'}, requirements:{type:'string'},
     path:{type:'string',multiple:true}, context:{type:'string',multiple:true},
-    config:{type:'string'}, checks:{type:'string'}, environment:{type:'string'}, rigor:{type:'string'},
+    image:{type:'string'},decisions:{type:'string'},history:{type:'string'},config:{type:'string'}, checks:{type:'string'}, environment:{type:'string'}, rigor:{type:'string'},
     profile:{type:'string'}, adapter:{type:'string'}, model:{type:'string'}, 'billing-mode':{type:'string'}, 'reasoning-effort':{type:'string'},
     'review-seconds':{type:'string'},'startup-seconds':{type:'string'},
   }});
@@ -68,6 +69,7 @@ try {
     const baseRequirements = await configurationRequirements(snap,config);
     const requirements = [baseRequirements, v.requirements ? await readFile(v.requirements,'utf8') : ''].filter(Boolean).join('\n\n');
     plan = await createPlan({...source,...neighbors,application:v.application,question:v.question,purpose:v.purpose,
+      decisions:v.decisions ? JSON.parse(await readFile(v.decisions,'utf8')) : config.decisions ?? [], history:v.history ? JSON.parse(await readFile(v.history,'utf8')) : null,image:v.image ?? config.image,
       requirements,paths:v.path,environment:v.environment ?? config.environment,level:v.level,rigor:v.rigor,lens:v.lens,
       profile:v.profile ?? config.profile,adapter:v.adapter ?? (resolveLevel(v).level === 'L1' ? undefined : config.adapter),model:v.model ?? (resolveLevel(v).level === 'L1' ? undefined : config.model),billingMode:v['billing-mode'],reasoningEffort:v['reasoning-effort'], checks,
       ...(v['review-seconds'] ? {reviewSeconds:Number(v['review-seconds'])}:{}),

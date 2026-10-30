@@ -15,6 +15,34 @@ export async function readPR(identity, execute = command) {
     'number,url,title,body,baseRefName,baseRefOid,headRefName,headRefOid,state'], execute));
   return { ...identity, ...info };
 }
+export async function collectConversation(identity, execute = command) {
+  const [owner, name] = identity.repository.split('/');
+  const query = `query($owner:String!,$name:String!,$number:Int!,$cursor:String) {
+    repository(owner:$owner,name:$name) { pullRequest(number:$number) {
+      reviewThreads(first:100,after:$cursor) { pageInfo { hasNextPage endCursor }
+        nodes { id isResolved isOutdated path comments(first:100) {
+          pageInfo { hasNextPage } nodes { id url body createdAt author { login } authorAssociation originalCommit { oid } commit { oid } }
+        } }
+      }
+    } }
+  }`;
+  const threads = [], gaps = [];
+  let cursor;
+  do {
+    const args = ['api', 'graphql', '-f', 'query=' + query, '-f', 'owner=' + owner, '-f', 'name=' + name, '-F', 'number=' + identity.number];
+    if (cursor) args.push('-f', 'cursor=' + cursor);
+    const response = JSON.parse(await gh(args, execute));
+    if (response.errors) throw new Error('GitHub conversation query failed');
+    const page = response.data.repository.pullRequest.reviewThreads;
+    for (const thread of page.nodes) {
+      if (thread.comments.pageInfo.hasNextPage) gaps.push('Thread ' + thread.id + ' has additional unavailable comments');
+      threads.push(thread);
+    }
+    cursor = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
+  } while (cursor);
+  const discussion = JSON.parse(await gh(['pr', 'view', String(identity.number), '--repo', identity.repository, '--json', 'comments,reviews,closingIssuesReferences'], execute));
+  return { retrievedAt: new Date().toISOString(), authority: 'context-only; explicit operator decisions determine accepted intent', threads, ...discussion, gaps };
+}
 export async function collectPR(url, repoPath, execute = command) {
   const identity = parsePR(url), info = await readPR(identity, execute);
   if (info.state !== 'OPEN') throw new Error('PR is not open; use explicit base/head for a historical review');
@@ -33,7 +61,10 @@ export async function collectPR(url, repoPath, execute = command) {
     if (![0,1,8].includes(result.code)) requireSuccess(result, 'Collect PR checks');
     checks = JSON.parse(result.stdout);
   } catch (error) { checksWarning = error.message; }
-  return { repo, base: info.baseRefOid, head: info.headRefOid, pullRequest: { ...info, observedAt: new Date().toISOString(), checks, checksWarning } };
+  let conversation;
+  try { conversation = await collectConversation(identity, execute); }
+  catch (error) { conversation = { threads: [], gaps: ['Conversation unavailable: ' + error.message], retrievedAt: new Date().toISOString() }; }
+  return { repo, base: info.baseRefOid, head: info.headRefOid, pullRequest: { ...info, conversation, observedAt: new Date().toISOString(), checks, checksWarning } };
 }
 export async function isPRFresh(plan, execute = command) {
   if (!plan.pullRequest) return true;

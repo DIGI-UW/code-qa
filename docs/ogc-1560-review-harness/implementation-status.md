@@ -123,3 +123,7 @@ Live testing found and fixed three harness issues: Docker group activation, a ne
 The common runner owns source capture, evidence validation and outcomes. The OpenELIS adapter owns its test setup and probes; the existing OpenELIS launcher owns application startup. The model supplies semantic judgment, without repair or publication authority. Obsolete-test removal remains valid when it follows accepted requirements.
 
 This version uses a fixed authentication smoke, not complete OpenELIS/browser suites or dynamically selected probes. General repository configuration, human/managed-result import, Claude and other adapters, automated GitHub review, cross-repository collection, hard token/currency caps and the held-out quality evaluation remain later work. Linux-host virtualization and hostile-code penetration testing are unverified. See the [runner guide](../review-runner.md) for usage and limits.
+
+## Context and isolated commands follow-up
+
+Added explicit accepted-decision provenance, paginated review-thread collection, private re-review history and generic container execution. Regression: 55 passing tests plus skill validation. Real L1 fixture: two passing behavior tests, zero AI calls, image identity recorded, cleanup removed the container. This is implementation and executor evidence; it does not establish higher-level review quality or completion of Stages 2–5. See [execution guide](execution-guide.md).

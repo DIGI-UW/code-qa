@@ -37,6 +37,18 @@ export const reviewerSchema = {
   }, required: ['schemaVersion', 'head', 'summary', 'coverage', 'omissions', 'assessments', 'questions', 'findings'],
 };
 
+const evidenceSchema = reviewerSchema.properties.findings.items.properties.evidence;
+reviewerSchema.properties.priorFindings = { type: 'array', items: {
+  type: 'object', additionalProperties: false,
+  properties: { id: {type:'string'}, currentFindingId: {type:'string'}, status: {type:'string',enum:['still-present','resolved','superseded','declined','unverified']}, reason: {type:'string'}, evidence: evidenceSchema },
+  required: ['id','currentFindingId','status','reason','evidence'],
+} };
+reviewerSchema.properties.findings.items.properties.approach = {
+  type:'object', additionalProperties:false,
+  properties: Object.fromEntries(['problem','reachablePath','simplerAlternative','alternativeEvidence'].map(k => [k,{type:'string'}])),
+  required:['problem','reachablePath','simplerAlternative','alternativeEvidence'],
+};
+
 // The CLI's schema request is not validation. Reject malformed or incomplete reports locally.
 export function validateSchema(value, schema, label = 'report') {
   if (schema.type === 'object') {
@@ -65,6 +77,7 @@ export function validateReviewer(report, packet, checks) {
   }
   for (const question of report.questions) if (!question.question.trim() || !question.neededEvidence.trim()) throw new Error('Empty unresolved question/evidence request');
   for (const finding of report.findings) {
+    if (finding.approach && Object.values(finding.approach).some(v => !v.trim())) throw new Error('Approach objection needs problem, reachable path and supported alternative');
     for (const name of ['title', 'consequence', 'owner', 'counterevidence']) if (!finding[name].trim()) throw new Error(`Empty finding ${name}`);
     for (const evidence of finding.evidence) {
       if (!evidence.quote.trim()) throw new Error('Empty evidence quotation');
@@ -99,7 +112,7 @@ export function renderReport(run) {
     `Level: **${run.plan.level}**. Evidence contract: ${run.plan.presetVersion}. Execution profile: ${run.plan.profile}. Model: ${run.plan.model || 'none'}.`,
     `Revision: ${run.plan.snapshot.head}`, `Application: ${run.plan.application}${run.plan.question ? ' — ' + run.plan.question : ''}`,
     `Environment: ${run.plan.environment}. Reviewer: ${run.plan.adapter}.`, '', '## Required evidence', '', ...run.plan.requiredEvidence.map(x => '- ' + x), '', '## Checks', ''];
-  for (const check of run.checks) lines.push(`- ${check.id}: ${check.status}${check.executed !== undefined ? ` (${check.executed} assertions)` : ''}`);
+  for (const check of run.checks) lines.push(`- ${check.id}: ${check.status}${check.executed !== undefined ? ` (${check.executed} ${check.measure ?? 'assertions'})` : ''}`);
   if (run.reviewer) {
     lines.push('', '## Reviewer assessment', '', run.reviewer.summary);
     lines.push('', '## Coverage', '', ...run.reviewer.assessments.map(a => '- ' + a.area + ': ' + a.status + ' — ' + a.reason));
