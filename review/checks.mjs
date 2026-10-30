@@ -16,6 +16,7 @@ export function validateChecks(checks) {
 }
 export function validateCheckResult(result, spec, head) {
   if (result.id !== spec.id || result.head !== head || result.kind !== spec.kind) throw new Error('Check evidence identity mismatch');
+  if (result.status === 'error' && ['infrastructure-error','timeout','uncovered'].includes(result.outcome) && Number.isInteger(result.executed) && result.executed >= 0 && Array.isArray(result.assertions)) return result;
   if (!['pass', 'fail'].includes(result.status) || !Number.isInteger(result.executed) || result.executed < 1 ||
       !Array.isArray(result.assertions) || result.assertions.length !== result.executed ||
       result.assertions.some(a => typeof a.name !== 'string' || !a.name || typeof a.passed !== 'boolean')) throw new Error('No valid executed check assertions');

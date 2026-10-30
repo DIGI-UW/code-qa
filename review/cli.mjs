@@ -25,17 +25,17 @@ Options:
   --application pr|targeted --question TEXT --lens TEXT
   --path PATH (repeatable) --context FILE (repeatable)
   --requirements FILE --config FILE --environment none|openelis|container --image IMAGE
-  --decisions FILE --history FILE
+  --decisions FILE --history FILE --sources FILE --history-depth N --probes FILE --experiments FILE --max-rounds 0..2
   --profile development --adapter codex --model MODEL_ID --billing-mode subscription|api|unknown
   --review-seconds N --reasoning-effort low|medium|high
   --startup-seconds N --checks FILE
 Config/check files are explicit trusted operator inputs, not PR instructions.
 L1: no AI. L2: semantic review with explicit coverage and questions.
 L3: test-strength proof. L4: running integration. L5: product/design acceptance.
-L3-L5 evidence executors are pending; these runs return partial before AI/startup.
-L1/L2 can run declared checks in OpenELIS (kind: test|scenario, argv, reports,
+L3 needs declared isolated probes and a behavior-to-test map. L4/L5 remain pending.
+L1/L2 can run declared checks in container/OpenELIS (kind: test|scenario|command, argv, reports,
 timeoutSeconds); those checks do not imply completion of a higher level.
-The development profile uses one inexpensive Sol session; --model overrides it.
+The development profile uses one inexpensive Sol session by default; --max-rounds explicitly reserves up to two reconsideration rounds within the same time allowance; --model overrides it.
 No automatic retry or model upgrade. Provider-specific model availability still applies.
 --config overrides the repository's .code-qa.json read from the base revision.
 Legacy --rigor mechanical|standard aliases map to L1/L3.
@@ -48,7 +48,7 @@ try {
     out:{type:'string'}, plan:{type:'string'}, run:{type:'string'}, level:{type:'string'}, lens:{type:'string'},
     application:{type:'string'}, question:{type:'string'}, purpose:{type:'string'}, requirements:{type:'string'},
     path:{type:'string',multiple:true}, context:{type:'string',multiple:true},
-    image:{type:'string'},decisions:{type:'string'},history:{type:'string'},config:{type:'string'}, checks:{type:'string'}, environment:{type:'string'}, rigor:{type:'string'},
+    sources:{type:'string'},'history-depth':{type:'string'},probes:{type:'string'},experiments:{type:'string'},'max-rounds':{type:'string'},image:{type:'string'},decisions:{type:'string'},history:{type:'string'},config:{type:'string'}, checks:{type:'string'}, environment:{type:'string'}, rigor:{type:'string'},
     profile:{type:'string'}, adapter:{type:'string'}, model:{type:'string'}, 'billing-mode':{type:'string'}, 'reasoning-effort':{type:'string'},
     'review-seconds':{type:'string'},'startup-seconds':{type:'string'},
   }});
@@ -69,6 +69,8 @@ try {
     const baseRequirements = await configurationRequirements(snap,config);
     const requirements = [baseRequirements, v.requirements ? await readFile(v.requirements,'utf8') : ''].filter(Boolean).join('\n\n');
     plan = await createPlan({...source,...neighbors,application:v.application,question:v.question,purpose:v.purpose,
+      sources:v.sources ? JSON.parse(await readFile(v.sources,'utf8')) : config.sources ?? [],historyDepth:Number(v['history-depth'] ?? config.historyDepth ?? 1),
+      probes:v.probes ? JSON.parse(await readFile(v.probes,'utf8')) : config.probes ?? [],experiments:v.experiments ? JSON.parse(await readFile(v.experiments,'utf8')) : config.experiments ?? [],maxRounds:Number(v['max-rounds'] ?? config.maxRounds ?? 0),
       decisions:v.decisions ? JSON.parse(await readFile(v.decisions,'utf8')) : config.decisions ?? [], history:v.history ? JSON.parse(await readFile(v.history,'utf8')) : null,image:v.image ?? config.image,
       requirements,paths:v.path,environment:v.environment ?? config.environment,level:v.level,rigor:v.rigor,lens:v.lens,
       profile:v.profile ?? config.profile,adapter:v.adapter ?? (resolveLevel(v).level === 'L1' ? undefined : config.adapter),model:v.model ?? (resolveLevel(v).level === 'L1' ? undefined : config.model),billingMode:v['billing-mode'],reasoningEffort:v['reasoning-effort'], checks,

@@ -2,7 +2,7 @@
 
 Updated 30 October 2026. This is the implementation roadmap following the requirements audit of code-qa v0.3 at `853a24d557cc451bce89ca8743fcf52a807de6fb`.
 
-**Status: Stage 1 is in progress; Stages 2–5 are pending.** Version 0.4 delivers the evidence contract and initial report/model-policy changes. Only checked items below are complete. See [validation-v04.json](validation-v04.json); this is not full-stage or review-quality acceptance.
+**Status: Stages 1–2 are implemented in part and under acceptance validation; Stage 3 implementation is in progress; Stages 4–5 remain pending.** Version 0.4 delivers the evidence contract and initial report/model-policy changes. Only checked items below are complete. See [validation-v04.json](validation-v04.json); this is not full-stage or review-quality acceptance.
 
 This checklist supersedes the earlier milestone sequence and the interpretation of L1–L5 as effort presets. See the [specification](specification.md), [goals](goals.md), [historical implementation evidence](implementation-status.md), and [20-gap audit](gap-inventory.json). Gap IDs below are stable links to that audit.
 
@@ -100,33 +100,35 @@ Scope is independent of level. L1 may execute existing deterministic probes; L2 
 
 ### G05 — Inspect necessary dependencies, consumers and history
 
-- [ ] Add trusted collection of necessary pinned dependency/consumer source and relevant ancestry.
+- [x] Add trusted collection of necessary pinned dependency/consumer source and relevant ancestry.
 - [ ] **Acceptance:** Attach needed dependencies/consumers as pinned read-only sources through trusted collection. Permit bounded ancestry inspection when a claim needs history. Every source citation identifies repository and revision. A missing required dependency produces a question/coverage gap, not an invented conclusion. Keep unrelated source out of the default review.
 
 ### G06 — Review the assembled stack and both sides of contracts
 
-- [ ] Represent ordered PR stacks, dependency revisions and the assembled candidate.
+- [x] Represent ordered PR stacks, dependency revisions and the assembled candidate.
 - [ ] **Acceptance:** Resolve ordered stack/dependency revisions and the assembled state without merging upstream. Compare emitted and consumed contracts and relevant configuration. A fixture with two individually passing layers that fail together must be detected and attributed to the owning layer. Report stale ancestry/pins separately from code findings.
 
 ### G07 — Connect test adequacy and test-layer choice to the runner
 
-- [ ] Wire right-layer test assessment into review and produce a behavior-to-test map.
+- [x] Wire right-layer test assessment into review and produce a behavior-to-test map.
 - [ ] **Acceptance:** For changed behavior, record the requirement, appropriate test layer, selected test, observable assertion and remaining gap. Pure calculations may use unit tests; persistence/framework behavior needs a real integration path; rendered state needs rendering; a user journey needs the running product. Detect a mock-only test that misses the actual regression, and accept legitimate removal of obsolete tests.
 
 ### G08 — Execute meaningful mutation and revert probes
 
-- [ ] Implement isolated production-mutation/revert probes with explicit expected assertions and outcome classification.
+- [x] Implement isolated production-mutation/revert probes with explicit expected assertions and outcome classification.
 - [ ] **Acceptance:** Predeclare the behavior, fixed tests, production mutation/revert and expected assertion. Show corrected pass → meaningful faulty variant fails the intended assertion → restored pass, in a disposable workspace. Distinguish survived, uncovered, equivalent/inapplicable, invalid mutation, setup/compile error, timeout and real detection. Cancellation discards mutated state. Refactors/removals may be explicitly inapplicable; never manufacture a red result.
 
 ### G09 — Let the reviewer request a falsifying experiment
 
-- [ ] Add a bounded reviewer-requested verification loop controlled by the executor.
+- [x] Add a bounded reviewer-requested verification loop controlled by the executor.
 - [ ] **Acceptance:** Support a bounded inspect → request check → isolated execution → reconsider sequence. The coordinator validates scope, authority, capabilities and execution limits; the model never receives unrestricted execution credentials. If a check cannot run, preserve the exact question/omission. Test a suspected defect that the requested experiment refutes.
 
 ### G10 — Represent actual outcomes and evidence types
 
 - [ ] Support typed artifacts and distinguish test cases, assertion failures and infrastructure errors.
 - [ ] **Acceptance:** Report test cases as test cases unless assertion counts are known. Preserve assertion failures versus infrastructure errors and links to raw reports. Support typed evidence such as command output, HTTP exchanges, persisted-state readback, browser traces, screenshots/videos and measurements. Validate artifact identity and make necessary evidence available to the reviewer; reuse the existing bundler where useful.
+
+**Implementation evidence:** [validation-v05.json](validation-v05.json) records 62 passing regression tests and real corrected → faulty → restored runs for both a decimal fixture and OpenELIS `BoundedDecimalTest`. The latter executed the three existing JUnit tests unchanged in Java 21. Live model runs remain recorded as partial until the final scope/gap contract demonstration passes. Typed JUnit outcomes/raw reports are implemented; browser/media artifacts are Stage 3 work.
 
 ### Stage 2 exit
 
