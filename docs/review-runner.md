@@ -1,4 +1,4 @@
-# Review runner, version 0.2
+# Review runner, version 0.3
 
 Run a mechanical or Codex review of an existing GitHub PR, or select local committed
 revisions. L4/L5 execute declared tests and scenarios in disposable OpenELIS before
@@ -45,13 +45,13 @@ of the level. Supplying a question defaults to targeted application.
 
 ## Levels and cost controls
 
-| Level | Executed work | Reviewer seconds | Source bytes | Reasoning |
-| --- | --- | ---: | ---: | --- |
-| L1 Mechanical | Snapshot, diff whitespace, optional declared execution; no AI | 0 | 32,000 | n/a |
-| L2 Lightweight | Focused source review | 120 | 32,000 | low |
-| L3 Standard | Broader source review with neighboring context | 300 | 200,000 | medium |
-| L4 Verified | Source review plus at least one declared executable check | 600 | 300,000 | high |
-| L5 Deep | L4 plus at least one declared interaction/scenario check | 900 | 500,000 | high |
+| Level | Executed work | Reviewer seconds | Reasoning |
+| --- | --- | ---: | --- |
+| L1 Mechanical | Snapshot, diff whitespace, optional declared execution; no AI | 0 | n/a |
+| L2 Lightweight | Diff-first source review with on-demand repository inspection | 120 | low |
+| L3 Standard | Broader source review | 300 | medium |
+| L4 Verified | Source review plus at least one declared executable check | 600 | high |
+| L5 Deep | L4 plus at least one declared interaction/scenario check | 900 | high |
 
 Every AI level permits **one session**, with no automatic retry, additional reviewer
 or model upgrade. Defaults use `gpt-6.1-sol`; the explicit allowlist also permits
@@ -59,10 +59,10 @@ or model upgrade. Defaults use `gpt-6.1-sol`; the explicit allowlist also permit
 policy, not a guarantee that an account has access. An unavailable model fails the
 run without fallback.
 
-Override `--review-seconds`, `--max-context-bytes`, and `--reasoning-effort` explicitly.
-The preview, plan and report record effective settings and preset version. Limits
-bound source bytes and reviewer wall time, **not** total prompt tokens or currency.
-Requirements, metadata and test evidence add to the prompt. Reported token usage
+Override `--review-seconds` and `--reasoning-effort` explicitly. There is no source-byte cap; the former `--max-context-bytes` option is removed.
+The preview, plan and report record effective settings and preset version. The reviewer wall-time limit does **not** impose a hard token or currency cap.
+The initial prompt contains scope, requirements, metadata and test evidence;
+the model reads the diff and relevant source through tools during that same session. Reported token usage
 is retained; subscription credits are not converted into dollars. Hard token/currency
 caps and extra sessions are unsupported. Legacy `--rigor mechanical|standard`
 aliases resolve to L1/L3 and conflicting level selections fail.
@@ -70,8 +70,8 @@ aliases resolve to L1/L3 and conflicting level selections fail.
 L1 is the default. L4/L5 require `--environment openelis` and declared checks;
 login smoke alone cannot satisfy them. Source-only reviews never claim runtime
 verification. Completion means completion of the selected scope, not whole-PR
-clearance. Missing required source stops AI execution as partial before credits
-or VM startup; narrow the question/scope or explicitly raise the allowance.
+clearance. A reviewer that cannot inspect necessary evidence within its session reports partial
+coverage, rather than no findings. Large files are not rejected before review.
 
 ## Preview or review local revisions
 
@@ -87,15 +87,17 @@ code-qa review --repo /path/to/repository --base origin/develop --head FEATURE \
 Plans and run directories are created once and never overwritten. Uncommitted
 changes are excluded. Local named refs are checked for movement; explicit SHAs
 intentionally select historical evidence and do not claim current GitHub freshness.
-Version 0.1 plans must be recreated; their owned workers can still be cleaned up.
+Version 0.1/0.2 plans must be recreated (plan schema 3, preset version 2); their owned workers can still be cleaned up. Old packet-only plans are not silently upgraded.
 
 ## Context and trusted repository configuration
 
-The collector adds direct Java/relative JavaScript/TypeScript imports, matching
-tests and one-hop filename references. This is a heuristic, not a complete call
-graph. Above 60 changed files it records that discovery was skipped. Use explicit
-context or narrow to a coherent scope. `--no-auto-context` disables the heuristic;
-it does not discard explicit context or trusted context rules.
+The reviewer starts with the selected diff and can search/read any committed file
+in the exact head or merge-base snapshot, including unchanged callers and tests.
+`--context` and trusted context rules are optional starting hints, not an access
+allowlist. The old automatic import/filename expansion and `--no-auto-context`
+option are removed; context selection now happens during review. Targeted findings
+must still concern the selected question/change. Submodule Gitlinks remain visible,
+but submodule repositories are not automatically fetched.
 
 `.code-qa.json` is read from the PR **base**, never the proposed head. An explicit
 `--config FILE` replaces it. Only these operator/base settings may select commands;
@@ -180,20 +182,31 @@ coordinator kill may leave a worker; recover only that run with:
 code-qa cleanup --run /path/to/review-runs/RUN_ID
 ```
 
-Codex receives source and check evidence in a separate read-only directory, with
-tools, host configuration, hooks, skills, memory and delegation disabled. It cannot
-repair, publish or merge. Managed host policy remains administrator-controlled;
-use a dedicated coordinator for hostile public-fork review. This is not a
-penetration-tested multi-tenant service. Authentication remains on the coordinator
-and is not copied into OpenELIS. Artifacts may contain source and logs; retain them
-privately and publish only deliberately selected evidence.
+Codex receives scope and check evidence in a separate directory with a fresh bare
+Git repository containing the pinned base/head snapshots. It uses `git diff`,
+`git grep` and `git show` through a read-only shell; the source is not checked out.
+This avoids loading PR-owned agent instructions, configuration or symlinks as
+filesystem configuration. Local uncommitted/untracked files, repository configuration,
+hooks and remotes are not copied. The snapshot and command transcript are retained.
+
+The adapter ignores user configuration and rules, disables automatic project
+instructions, host skills, hooks, memory, apps and delegation, and uses no approvals.
+Shell commands receive a minimal environment. The reviewer is instructed to inspect
+only the snapshot, never run repository code/tests, read host credentials, repair,
+publish or merge. Read-only mode prevents filesystem mutations and disables command
+network access; it is **not a confidentiality boundary for all host reads**. Use a
+dedicated coordinator for hostile public-fork review. This is not a penetration-tested
+multi-tenant service. Authentication stays on the coordinator, not in the OpenELIS
+worker or snapshot. Artifacts may contain source and logs; retain them privately and
+publish only deliberately selected evidence.
 
 ## Reports and exit codes
 
 Each run retains `plan.json`, `packet.json`, `result.json`, `report.md` and logs.
 The report shows scope, level, model/limits, executed assertions, evidence-linked
-findings, omissions and cleanup. Source quotes are checked against exact recorded
-lines. GitHub check status is a collection-time snapshot, not a replacement for
+findings, omissions and cleanup. Source quotes, including those from unchanged files discovered during review, are
+checked against exact committed lines and retained in `packet.json`. Unread source
+is not represented as reviewed merely because it was available. GitHub check status is a collection-time snapshot, not a replacement for
 live CI.
 
 - Exit 0: requested execution completed, including completed runs **with findings**.

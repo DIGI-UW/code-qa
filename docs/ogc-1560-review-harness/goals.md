@@ -24,7 +24,7 @@ Captured 22 October 2026 from the user's requests in this conversation. This fil
 
 ## Current scope
 
-The user has authorized implementing, testing and pushing the first version: OpenELIS is the first isolated environment and one AI reviewer is included. Version 0.2 implements parameterized L1–L5 selection, enforced model/time/context limits, local PR collection and declared isolated checks/scenarios. See the implementation record for executed validation and remaining scope. Broader automation, additional adapters and the quality pilot remain later work. Do not change application behavior, install enforcement hooks, merge PRs or claim model-review reliability from a small smoke test.
+The user has authorized implementing, testing and pushing the first version: OpenELIS is the first isolated environment and one AI reviewer is included. Version 0.3 implements parameterized L1–L5 selection, enforced model/time/session limits, on-demand repository inspection, local PR collection and declared isolated checks/scenarios. See the implementation record for executed validation and remaining scope. Broader automation, additional adapters and the quality pilot remain later work. Do not change application behavior, install enforcement hooks, merge PRs or claim model-review reliability from a small smoke test.
 
 ## Decisions still open
 

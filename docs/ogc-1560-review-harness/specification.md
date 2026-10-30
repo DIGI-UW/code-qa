@@ -71,18 +71,17 @@ or a PR-supplied override. Version 0.2 enforces this policy before invocation.
 **Parameters and defaults.** Keep one versioned preset definition for the CLI,
 automated jobs and skill entry points. Each level resolves into application/lens,
 source scope and required neighbors, check selection, environment, adapter/model,
-reasoning effort where supported, source-context limit, reviewer time/session/
+reasoning effort where supported, reviewer time/session/
 round limits, and separate startup/test/cleanup limits. Record the preset version,
 requested overrides and effective values in both the plan and report. Explicit
 trusted overrides may change supported limits, but cannot turn L1 into an AI run
 or bypass the model ceiling. Unknown levels and unsupported capabilities fail
 before paid execution; never silently substitute another level.
 
-Implemented L2 preset version 1: one Codex Sol session, low reasoning
-where supported, 120 seconds and 32,000 source-context bytes. This is a
-smaller default, not an input-token or currency cap. Prepare one complete call
-path before spending credits; if necessary context will not fit, report that
-limitation instead of launching extra rounds. Higher presets must declare their
+Implemented L2 preset version 2: one Codex Sol session, low reasoning
+where supported, and 120 seconds, with diff-first repository inspection and no source-byte cap. This is a
+smaller default, not an input-token or currency cap. Inspect relevant call paths during the same session; if necessary evidence cannot
+be inspected in time, report partial coverage instead of launching extra rounds. Higher presets must declare their
 own bounded defaults before they can execute. Environment selection remains
 independent: L2 can use existing evidence without startup, and L1 can boot an
 isolated application without spending AI credits.

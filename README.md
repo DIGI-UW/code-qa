@@ -55,7 +55,7 @@ node install.mjs --target /path/to/host-repo
 ## License
 MIT — see [LICENSE](LICENSE).
 
-## Local review harness (v0.2)
+## Local review harness (v0.3)
 
 Run a review of an existing PR:
 
@@ -66,7 +66,9 @@ node review/cli.mjs review --pr https://github.com/OWNER/REPO/pull/NUMBER --leve
 Choose L1 for no AI, L2 for one lightweight Sol session, L3 for broader source
 review, L4 for declared executable checks, or L5 for selected scenarios. L4/L5
 run in disposable OpenELIS and require a checks configuration. Levels, application,
-question and lens are independent; no automatic model escalation occurs.
+question and lens are independent; no automatic model escalation occurs. AI reviewers
+start with the diff and inspect pinned repository source as needed, without a
+source-byte cap.
 
 The [runner guide](docs/review-runner.md) includes installation, focused reviews,
 limits, repository configuration and executable examples. Run `npm test` for

@@ -1,9 +1,9 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { command, requireSuccess } from './process.mjs';
-import { packetFor, isFresh } from './snapshot.mjs';
+import { packetFor, isFresh, captureSourceEvidence } from './snapshot.mjs';
 import { validatePlan, runDirectory } from './plan.mjs';
-import { renderReport, validateReviewer } from './report.mjs';
+import { renderReport, validateReviewer, validateSchema, reviewerSchema } from './report.mjs';
 import { reviewWithCodex } from './reviewers/codex.mjs';
 import { isPRFresh } from './github.mjs';
 import { validateCheckResult } from './checks.mjs';
@@ -15,7 +15,7 @@ export async function runReview(plan, outputRoot, { signal, reviewer = reviewWit
   const directory = runDirectory(outputRoot, plan);
   await mkdir(outputRoot, { recursive: true, mode: 0o700 });
   await mkdir(directory, { mode: 0o700 }); // Never overwrite a prior run/evidence.
-  const run = { schemaVersion: 1, harnessVersion: '0.2.0', nodeVersion: process.version, plan, status: 'partial', assessment: 'undetermined', phase: 'prepare',
+  const run = { schemaVersion: 1, harnessVersion: '0.3.0', nodeVersion: process.version, plan, status: 'partial', assessment: 'undetermined', phase: 'prepare',
     checks: [], reasons: [], cleanup: 'not-needed', usage: { sessions: 0, reported: null }, reviewer: null };
   const save = async () => {
     await writeFile(join(directory, 'result.json'), JSON.stringify(run, null, 2) + '\n', { mode: 0o600 });
@@ -34,10 +34,6 @@ export async function runReview(plan, outputRoot, { signal, reviewer = reviewWit
       plan.snapshot.mergeBase, plan.snapshot.head, '--', ...packet.selectedPaths], { signal, log: join(directory, 'whitespace.log') });
     if (![0, 2].includes(diff.code) || diff.timedOut || diff.cancelled || diff.overflow || diff.spawnError) requireSuccess(diff, 'Whitespace check');
     run.checks.push({ id: 'whitespace', status: diff.code === 0 ? 'pass' : 'fail', evidence: diff.stdout.trim(), paths: packet.selectedPaths });
-    if (plan.adapter === 'codex' && packet.omissions.length) {
-      const error = new Error('Required source omitted; narrow scope or adjust context before spending AI credits: ' + packet.omissions.join('; '));
-      error.kind = 'partial'; throw error;
-    }
     if (plan.environment === 'openelis') {
       const environment = environmentFactory(plan, directory);
       try {
@@ -65,7 +61,11 @@ export async function runReview(plan, outputRoot, { signal, reviewer = reviewWit
       await phase('reviewer');
       run.usage.sessions = 1;
       const reviewed = await reviewer(plan, packet, run.checks, directory, signal);
+      validateSchema(reviewed.report, reviewerSchema);
+      await captureSourceEvidence(reviewed.report, packet);
+      await writeFile(join(directory, 'packet.json'), JSON.stringify(packet, null, 2) + '\n', { mode: 0o600 });
       run.reviewer = validateReviewer(reviewed.report, packet, run.checks); run.usage.reported = reviewed.usage;
+      run.inspection = reviewed.inspection ?? null;
       run.adapterDiagnostics = reviewed.diagnostics ?? [];
       if (run.reviewer.coverage === 'partial' || run.reviewer.omissions.length) run.reasons.push(...run.reviewer.omissions, 'Reviewer coverage is partial');
     }

@@ -8,7 +8,7 @@ function integer(value, name, min, max) {
   if (!Number.isInteger(value) || value < min || value > max) throw new Error(`${name} must be an integer in ${min}..${max}`);
 }
 export function validatePlan(plan) {
-  if (plan.schemaVersion !== 2 || !/^[0-9a-f-]{36}$/.test(plan.id)) throw new Error('Unsupported plan version/id; create a new plan');
+  if (plan.schemaVersion !== 3 || !/^[0-9a-f-]{36}$/.test(plan.id)) throw new Error('Unsupported plan version/id; create a new plan');
   if (!LEVELS[plan.level] || plan.presetVersion !== PRESET_VERSION) throw new Error('Unknown level/preset');
   if (!['pr', 'targeted'].includes(plan.application) || (plan.application === 'targeted' && !plan.question?.trim())) throw new Error('Targeted review needs a question');
   if (!['mechanical', 'standard'].includes(plan.rigor)) throw new Error('Unknown rigor; use --level L1..L5');
@@ -20,7 +20,7 @@ export function validatePlan(plan) {
   if (plan.maxUsd !== undefined || plan.maxTokens !== undefined || plan.maxSessions !== (plan.level === 'L1' ? 0 : 1)) throw new Error('Hard token/currency caps and extra reviewer sessions are unsupported');
   integer(plan.reviewSeconds, 'reviewSeconds', plan.level === 'L1' ? 0 : 1, 1800);
   integer(plan.startupSeconds, 'startupSeconds', 1, 7200);
-  integer(plan.maxContextBytes, 'maxContextBytes', 100, 1_000_000);
+  if ('maxContextBytes' in plan) throw new Error('Source-byte limits were removed; create a repository review plan');
   if (!['low', 'medium', 'high'].includes(plan.reasoningEffort)) throw new Error('Unsupported reasoning effort');
   if (typeof plan.lens !== 'string' || plan.lens.length > 200) throw new Error('Invalid lens');
   for (const field of ['base', 'head', 'mergeBase']) if (!SHA.test(plan.snapshot?.[field])) throw new Error('Invalid snapshot revision');
@@ -36,9 +36,10 @@ export function validatePlan(plan) {
   return plan;
 }
 export async function createPlan(options) {
+  if (options.maxContextBytes !== undefined) throw new Error('Source-byte limits were removed; reviewers inspect the repository as needed');
   const preset = resolveLevel(options), ai = preset.level !== 'L1';
   const plan = {
-    schemaVersion: 2, presetVersion: PRESET_VERSION, id: randomUUID(), createdAt: new Date().toISOString(),
+    schemaVersion: 3, presetVersion: PRESET_VERSION, id: randomUUID(), createdAt: new Date().toISOString(),
     snapshot: await snapshot(options.repo, options.base, options.head),
     level: preset.level, lens: options.lens ?? '', reasoningEffort: options.reasoningEffort ?? preset.reasoningEffort,
     application: options.application ?? (options.question ? 'targeted' : 'pr'), question: options.question ?? '',
@@ -47,9 +48,9 @@ export async function createPlan(options) {
     rigor: ai ? 'standard' : 'mechanical', adapter: options.adapter ?? (ai ? 'codex' : 'none'), environment: options.environment ?? 'none',
     model: options.model ?? (ai ? 'gpt-6.1-sol' : ''), billingMode: options.billingMode ?? 'unknown', maxSessions: ai ? 1 : 0,
     reviewSeconds: options.reviewSeconds ?? preset.reviewSeconds, startupSeconds: options.startupSeconds ?? 3600,
-    maxContextBytes: options.maxContextBytes ?? preset.maxContextBytes, checks: options.checks ?? [],
+    checks: options.checks ?? [],
     contextNotes: options.contextNotes ?? [], pullRequest: options.pullRequest ?? null,
-    overrides: Object.fromEntries(['model','reviewSeconds','startupSeconds','maxContextBytes','reasoningEffort']
+    overrides: Object.fromEntries(['model','reviewSeconds','startupSeconds','reasoningEffort']
       .filter(key => options[key] !== undefined).map(key => [key, options[key]])),
     ...(options.maxUsd !== undefined ? { maxUsd: options.maxUsd } : {}),
     ...(options.maxTokens !== undefined ? { maxTokens: options.maxTokens } : {}),

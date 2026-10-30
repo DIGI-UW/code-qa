@@ -55,8 +55,9 @@ test('mechanical CLI completes without any AI and allows approved test deletion'
   assert.equal(result.run.status, 'complete'); assert.equal(result.run.assessment, 'no_findings');
   assert.equal(result.run.usage.sessions, 0);
   const packet = JSON.parse(await readFile(join(result.directory, 'packet.json'), 'utf8'));
-  assert.ok(packet.files.some(f => f.path === 'obsolete.test.js' && f.side === 'base'));
-  assert.ok(!packet.files.some(f => f.path === 'obsolete.test.js' && f.side === 'head'));
+  assert.ok(packet.selectedPaths.includes('obsolete.test.js'));
+  assert.equal(packet.sourceAccess, 'repository');
+  assert.deepEqual(packet.files, []); // L1 does not load source or spend AI context.
   await assert.rejects(runReview(plan, f.output), /EEXIST/);
 });
 
@@ -65,7 +66,7 @@ test('targeted review includes declared neighbors and limits its question', asyn
   const packet = await packetFor(plan);
   assert.deepEqual(packet.selectedPaths, ['value.js']);
   assert.equal(packet.question, 'Is value changed?');
-  assert.ok(packet.files.some(f => f.path === 'obsolete.test.js'));
+  assert.ok(packet.contextPaths.includes('obsolete.test.js'));
   await assert.rejects(planFor(f, { application: 'targeted' }), /question/);
   await assert.rejects(planFor(f, { paths: ['../secret'] }), /Invalid source path/);
 });
@@ -96,13 +97,40 @@ test('unsupported paid limits, combinations and unknown rigor are rejected', asy
   assert.throws(() => validatePlan({ ...plan, rigor: 'mechanical' }), /Mechanical/);
 });
 
-test('context omission cannot produce a clean AI review', async t => {
+test('large source no longer blocks a lightweight review or fills its prompt', async t => {
   const f = await fixture(t);
-  await writeFile(join(f.repo, 'large.js'), 'x'.repeat(400));
+  await writeFile(join(f.repo, 'large.js'), '// context\n'.repeat(120000));
   await git(f.repo, ['add', '.']); await git(f.repo, ['commit', '-m', 'large']);
-  const result = await runReview(await planFor(f, { ...ai, maxContextBytes: 100 }), f.output, { reviewer: fakeReviewer });
-  assert.equal(result.run.status, 'partial'); assert.equal(result.run.assessment, 'undetermined');
-  assert.ok(result.run.reasons.some(r => r.includes('context limit')));
+  const plan = await planFor(f, { level: 'L2' });
+  const result = await runReview(plan, f.output, { reviewer: async (plan, packet) => {
+    assert.ok(packet.selectedPaths.includes('large.js'));
+    assert.equal(packet.files.length, 0); assert.equal(packet.omissions.length, 0);
+    assert.ok(JSON.stringify(packet).length < 10000);
+    return fakeReviewer(plan);
+  } });
+  assert.equal(result.run.status, 'complete'); assert.equal(result.run.usage.sessions, 1);
+  assert.equal(plan.reviewSeconds, 120); assert.equal(plan.reasoningEffort, 'low');
+});
+
+// The reviewer must be able to substantiate a finding in a caller not preselected
+// by the collector, and the harness must validate it against committed source.
+test('on-demand caller evidence is validated and retained without trusting dirty source', async t => {
+  const f = await fixture(t);
+  await writeFile(join(f.repo, 'caller.js'), 'export const caller = () => 1;\n');
+  await git(f.repo, ['add', '.']); await git(f.repo, ['commit', '-m', 'caller']);
+  const base = (await git(f.repo, ['rev-parse', 'HEAD'])).trim();
+  await writeFile(join(f.repo, 'value.js'), 'export const value = 3;\n');
+  await git(f.repo, ['add', '.']); await git(f.repo, ['commit', '-m', 'value']);
+  const plan = await planFor(f, { base, level: 'L2', paths: ['value.js'] });
+  await writeFile(join(f.repo, 'caller.js'), 'dirty source must not be reviewed');
+  const report = cleanReport(plan.snapshot.head);
+  report.findings.push({ title: 'Caller', consequence: 'Caller mismatch', owner: 'caller', severity: 'low',
+    evidence: [{ kind: 'source', path: 'caller.js', side: 'head', line: 1, checkId: '', quote: 'caller = () => 1' }] });
+  const result = await runReview(plan, f.output, { reviewer: async () => ({ report }) });
+  assert.equal(result.run.status, 'complete');
+  const packet = JSON.parse(await readFile(join(result.directory, 'packet.json'), 'utf8'));
+  assert.equal(packet.files[0].text, 'export const caller = () => 1;\n');
+  assert.equal(await readFile(join(f.repo, 'caller.js'), 'utf8'), 'dirty source must not be reviewed');
 });
 
 for (const failure of ['startup', 'verification', 'zero-tests', 'cancellation']) {
@@ -161,28 +189,50 @@ test('command timeout and output limit are distinct incomplete outcomes', async 
   assert.throws(() => requireSuccess(overflow, 'test'), /output limit/);
 });
 
-test('Codex runs in packet-only mode and validates its completed-turn envelope', async t => {
+test('Codex inspects pinned diffs and unlisted callers with a read-only session', async t => {
   const f = await fixture(t), plan = await planFor(f, ai), packet = await packetFor(plan);
   const args = codexArgs(plan, '/isolated', '/schema', '/output');
   assert.ok(args.includes('--ignore-user-config')); assert.ok(args.includes('--ignore-rules'));
   assert.equal(args[args.indexOf('--sandbox') + 1], 'read-only');
   assert.ok(!args.some(a => a.includes('dangerously')));
+  assert.ok(args.includes('shell_tool'));
+  assert.equal(args[args.indexOf('code_mode_host') - 1], '--enable');
   const dir = join(f.dir, 'codex'); await mkdir(dir);
-  const result = await reviewWithCodex(plan, packet, [], dir, undefined, async argv => {
+  await writeFile(join(f.repo, 'value.js'), 'dirty content');
+  await writeFile(join(f.repo, 'private-untracked'), 'must not enter snapshot');
+  const result = await reviewWithCodex(plan, packet, [], dir, undefined, async (argv, options) => {
+    assert.match(options.input, /Start with the selected diff/);
+    assert.doesNotMatch(options.input, /export const value/);
+    const repo = join(options.cwd, 'repository.git');
+    assert.equal((await git(repo, ['show', 'review-head:value.js'])).trim(), 'export const value = 2;');
+    assert.match(await git(repo, ['diff', 'review-base', 'review-head', '--', 'value.js']), /value = 1/);
+    assert.match(await git(repo, ['show', 'review-base:obsolete.test.js']), /Superseded responsibility/);
+    assert.equal(await git(repo, ['remote']), '');
+    assert.equal(await git(repo, ['ls-tree', '--name-only', 'review-head', '--', 'private-untracked']), '');
     await writeFile(argv[argv.indexOf('--output-last-message') + 1], JSON.stringify(cleanReport(plan.snapshot.head)));
-    return { code: 0, stdout: JSON.stringify({ type: 'item.completed', item: { type: 'error', message: 'Optional tool disabled' } }) + '\n' + JSON.stringify({ type: 'turn.completed', usage: { output_tokens: 3 } }) + '\n' };
+    return { code: 0, stdout: JSON.stringify({ type: 'item.completed', item: { type: 'command_execution', command: 'git show review-head:value.js', exit_code: 0 } }) + '\n' + JSON.stringify({ type: 'turn.completed', usage: { output_tokens: 3 } }) + '\n' };
   });
   assert.equal(result.usage.output_tokens, 3);
+  assert.equal(result.inspection.commands, 1);
   validateReviewer(result.report, packet, []);
 });
 
-test('Codex tool attempts, process failures and empty completion are rejected', async t => {
+test('Codex unauthorized tools, process failures and empty completion are rejected', async t => {
   const f = await fixture(t), plan = await planFor(f, ai), packet = await packetFor(plan);
-  for (const [id, result] of Object.entries({ tool: { code: 0, stdout: '{"type":"item.completed","item":{"type":"command_execution"}}\n{"type":"turn.completed"}\n' },
+  for (const [id, result] of Object.entries({ tool: { code: 0, stdout: '{"type":"item.completed","item":{"type":"file_change"}}\n{"type":"turn.completed"}\n' },
     failure: { code: 1, stdout: '' }, empty: { code: 0, stdout: '' } })) {
     const dir = join(f.dir, id); await mkdir(dir);
     await assert.rejects(reviewWithCodex(plan, packet, [], dir, undefined, async () => result));
   }
+});
+
+test('a complete repository review requires recorded inspection, not just PR metadata', async t => {
+  const f = await fixture(t), plan = await planFor(f, ai), packet = await packetFor(plan);
+  const dir = join(f.dir, 'no-inspection'); await mkdir(dir);
+  await assert.rejects(reviewWithCodex(plan, packet, [], dir, undefined, async argv => {
+    await writeFile(argv[argv.indexOf('--output-last-message') + 1], JSON.stringify(cleanReport(plan.snapshot.head)));
+    return { code: 0, stdout: '{"type":"turn.completed"}\n' };
+  }), /No repository inspection/);
 });
 
 test('isolated workers have distinct names and refuse an existing resource', async t => {

@@ -28,30 +28,30 @@ export async function packetFor(plan) {
   const { snapshot: snap } = plan;
   const changed = plan.paths.length ? snap.paths.filter(p => plan.paths.some(prefix => p === prefix || p.startsWith(prefix + '/'))) : snap.paths;
   if (plan.paths.length && !changed.length) throw new Error('Targeted paths do not intersect the changed files');
-  const selected = [...new Set([...changed, ...plan.contextPaths])];
-  const files = [], omissions = [];
-  let remaining = plan.maxContextBytes;
-  for (const path of selected) {
-    sourcePath(path);
-    for (const side of ['base', 'head']) {
-      const sha = side === 'base' ? snap.mergeBase : snap.head;
-      const tree = await git(snap.repo, ['ls-tree', '-z', sha, '--', path]);
-      const entry = tree.split('\0').find(line => line.endsWith('\t' + path));
-      if (!entry) continue; // A new or deleted file legitimately has only one side.
-      const [mode, type, oid] = entry.split('\t')[0].split(' ');
-      if (type !== 'blob' || mode === '120000') { omissions.push(`${side}:${path}: non-regular source`); continue; }
-      const size = Number((await git(snap.repo, ['cat-file', '-s', oid])).trim());
-      if (size > remaining) { omissions.push(`${side}:${path}: context limit`); continue; }
-      const text = await git(snap.repo, ['cat-file', 'blob', oid]);
-      if (text.includes('\0')) { omissions.push(`${side}:${path}: binary`); continue; }
-      remaining -= Buffer.byteLength(text);
-      files.push({ path, side, revision: sha, text });
-    }
-  }
-  return { schemaVersion: 1, snapshot: snap, application: plan.application, question: plan.question,
+  // Source is read from the pinned repository on demand, never packed to a byte allowance.
+  for (const path of [...changed, ...plan.contextPaths]) sourcePath(path);
+  return { schemaVersion: 2, sourceAccess: 'repository', snapshot: snap,
+    application: plan.application, question: plan.question,
     purpose: plan.purpose, requirements: plan.requirements, selectedPaths: changed,
     contextNotes: plan.contextNotes ?? [], pullRequest: plan.pullRequest ? { url: plan.pullRequest.url, title: plan.pullRequest.title, body: plan.pullRequest.body, checks: plan.pullRequest.checks, checksWarning: plan.pullRequest.checksWarning } : null,
-    contextPaths: plan.contextPaths, files, omissions };
+    contextPaths: plan.contextPaths, files: [], omissions: [] };
+}
+
+// Retain only cited source as evidence. Unchanged callers are valid evidence too.
+export async function captureSourceEvidence(report, packet) {
+  for (const finding of report.findings) for (const evidence of finding.evidence) {
+    if (evidence.kind !== 'source' || packet.files.some(f => f.path === evidence.path && f.side === evidence.side)) continue;
+    const path = sourcePath(evidence.path);
+    const revision = evidence.side === 'base' ? packet.snapshot.mergeBase : packet.snapshot.head;
+    const tree = await git(packet.snapshot.repo, ['ls-tree', '-z', revision, '--', path]);
+    const entry = tree.split('\0').find(line => line.endsWith('\t' + path));
+    const [mode, type, oid] = (entry?.split('\t')[0] ?? '').split(' ');
+    if (type !== 'blob' || !['100644', '100755'].includes(mode)) throw new Error('Source evidence is not a regular committed file');
+    const text = requireSuccess(await command(['git', '--no-pager', '-C', packet.snapshot.repo, 'cat-file', 'blob', oid],
+      { maxBytes: Infinity }), 'Read cited source').stdout;
+    if (text.includes('\0')) throw new Error('Source evidence is binary');
+    packet.files.push({ path, side: evidence.side, revision, text });
+  }
 }
 
 export async function isFresh(snap) {

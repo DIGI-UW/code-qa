@@ -82,7 +82,7 @@ export function renderReport(run) {
   }
   lines.push('', '## Scope', '', `Changed-file selection: ${run.plan.paths.length ? run.plan.paths.join(', ') : 'all changed files'}`,
     `Context files: ${run.plan.contextPaths.join(', ') || 'none'}`, `Focus: ${run.plan.lens || run.plan.question || 'general'}`,
-    `Reviewer allowance: ${run.plan.reviewSeconds}s, ${run.plan.maxContextBytes} source bytes; ${run.plan.reasoningEffort} reasoning.`,
+    `Reviewer allowance: ${run.plan.reviewSeconds}s; repository inspection without a source-byte cap; ${run.plan.reasoningEffort} reasoning.`,
     `Explicit model/limit overrides: ${JSON.stringify(run.plan.overrides ?? {})}`,
     `Startup allowance: ${run.plan.startupSeconds}s; selected check allowances: ${run.plan.checks.map(c => c.id + '=' + c.timeoutSeconds + 's').join(', ') || 'none'}.`,
     ...run.plan.contextNotes.map(note => '- ' + note));

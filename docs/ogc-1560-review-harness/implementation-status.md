@@ -1,5 +1,39 @@
 # Implementation and validation
 
+## Version 0.3 — 29 October 2026
+
+AI reviews now begin with the diff and inspect exact committed source through a
+read-only shell in the same session. A fresh bare Git snapshot exposes the base
+and head without copying the operator's worktree, hooks, configuration or remotes.
+The source-byte cap, full-file prompt packing, automatic neighbor expansion and
+their obsolete tests are removed. Explicit context remains an optional hint.
+Quoted evidence from newly discovered callers is validated and retained.
+
+L2 still uses one Sol session, low reasoning and 120 seconds. The same model ceiling,
+freshness, timeout and partial-result semantics remain. Plan schema 3 and preset 2
+require recreating older plans; they are not silently converted. Read-only shell
+execution is not a confidentiality boundary for all host reads; hostile-fork review
+still needs a dedicated coordinator, as documented in the runner guide.
+
+Validation:
+
+- 39 automated tests cover large-source admission without prompt packing,
+  inspection of pinned base/head and unchanged callers, dirty/untracked-file
+  exclusion, exact citation validation, model policy, partial/error handling,
+  process cancellation and isolated-check cleanup.
+- Seven skill definitions validate; whitespace checks pass.
+- A real L2 Sol session executed five read-only inspection commands, traced an
+  unchanged caller and identified a seeded authorization regression in a 51 KB
+  source file. The exact base, head and caller citations validated. This is adapter
+  integration evidence, not a model-quality benchmark.
+- The first live attempt correctly remained partial because the adapter had
+  disabled this Codex installation's code-mode host. Enabling the host fixed
+  tool execution; the unsuccessful run is retained locally.
+
+See [selected v0.3 evidence](validation-v03.json). The previous 22-PR campaign's
+four partial reviews will be rerun with the pushed implementation; their application
+findings and CI state are separate from these harness tests.
+
 ## Version 0.2 — 29 October 2026
 
 The current implementation adds parameterized L1–L5, independent application/lens,

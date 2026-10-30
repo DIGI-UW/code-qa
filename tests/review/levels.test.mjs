@@ -34,9 +34,9 @@ test('all levels resolve to distinct work and explicit overrides; Sol ceiling ho
     assert.equal(p.level,level);assert.equal(p.maxSessions,level==='L1'?0:1);
     if(level!=='L1')assert.equal(p.model,'gpt-6.1-sol');
   }
-  const p=await createPlan({...f,level:'L2',reviewSeconds:40,maxContextBytes:15000});
-  assert.equal(p.reviewSeconds,40);assert.equal(p.maxContextBytes,15000);
-  assert.deepEqual(p.overrides,{reviewSeconds:40,maxContextBytes:15000});
+  const p=await createPlan({...f,level:'L2',reviewSeconds:40});
+  assert.equal(p.reviewSeconds,40);assert.equal(p.maxContextBytes,undefined);
+  assert.deepEqual(p.overrides,{reviewSeconds:40});
   assert.ok(codexArgs(p,'/work','/schema','/result').includes('model_reasoning_effort="low"'));
   for(const model of ['gpt-6-astra','made-up-model'])await assert.rejects(createPlan({...f,level:'L2',model}),/Sol\/Luna/);
   await assert.rejects(createPlan({...f,level:'L1',model:'gpt-6.1-sol'}),/cannot select/);
@@ -46,13 +46,13 @@ test('all levels resolve to distinct work and explicit overrides; Sol ceiling ho
   await assert.rejects(createPlan({...f,level:'L5',environment:'openelis',checks:[check]}),/scenario/);
   assert.throws(()=>validatePlan({...p,maxSessions:2}),/unsupported/);
 });
-test('base config stays trusted; imports and matching tests enter context',async t=>{
+test('base configuration supplies trusted context hints without copying dependencies',async t=>{
   const f=await fixture(t),p=await createPlan({...f,paths:['consumer.js']});
   const config=await trustedConfig(p.snapshot);
   assert.equal(config.checks,undefined);
   const context=await prepareContext(p.snapshot,p.paths,[],config);
   assert.ok(context.contextPaths.includes('producer.js'));
-  assert.ok(context.contextPaths.includes('consumer.test.js'));
+  assert.deepEqual(context.contextPaths, ['producer.js']);
   await assert.rejects(prepareContext(p.snapshot,p.paths,['missing.js']),/do not exist/);
   const packet=await packetFor({...p,...context});assert.equal(packet.omissions.length,0);
 });
@@ -80,11 +80,11 @@ test('L4 and L5 execute selected checks before one reviewer and always clean up'
     assert.equal(r.run.status,'complete');assert.equal(r.run.assessment,'findings');assert.equal(r.run.usage.sessions,1);
   }
 });
-test('context overflow spends zero model sessions and boots no VM',async t=>{
-  const f=await fixture(t),p=await createPlan({...f,level:'L2',maxContextBytes:100,environment:'openelis'});
-  let calls=0;
-  const r=await runReview(p,join(f.repo,'runs'),{reviewer:async()=>{calls++;},environmentFactory:()=>{throw Error('must not boot');}});
-  assert.equal(r.run.status,'partial');assert.equal(r.run.usage.sessions,0);assert.equal(calls,0);
+test('obsolete source-byte limits and old plans cannot silently change review semantics',async t=>{
+  const f=await fixture(t),p=await createPlan({...f,level:'L2'});
+  await assert.rejects(createPlan({...f,level:'L2',maxContextBytes:100}),/Source-byte limits were removed/);
+  assert.throws(()=>validatePlan({...p,schemaVersion:2}),/Unsupported plan version/);
+  assert.throws(()=>validatePlan({...p,maxContextBytes:100}),/Source-byte limits were removed/);
 });
 test('remote movement during execution retains superseded evidence',async t=>{
   const f=await fixture(t),p=await createPlan({...f,level:'L2'});let n=0;
