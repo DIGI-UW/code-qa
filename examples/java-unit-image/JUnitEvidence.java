@@ -19,6 +19,14 @@ public class JUnitEvidence {
       public void testStarted(Description d) {
         Element c=doc.createElement("testcase");c.setAttribute("classname",d.getClassName());c.setAttribute("name",d.getMethodName());suite.appendChild(c);cases.put(d,c);
       }
+      public void testIgnored(Description d) {
+        testStarted(d);cases.get(d).appendChild(doc.createElement("skipped"));
+      }
+      public void testAssumptionFailure(Failure f) {
+        Element c=cases.get(f.getDescription());
+        if(c==null){testStarted(f.getDescription());c=cases.get(f.getDescription());}
+        c.appendChild(doc.createElement("skipped"));
+      }
       public void testFailure(Failure f) {
         Element c=cases.get(f.getDescription());
         if(c==null){testStarted(f.getDescription());c=cases.get(f.getDescription());}

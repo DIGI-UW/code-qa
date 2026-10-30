@@ -1,3 +1,4 @@
+import {probeProgram} from './probe-program.mjs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
@@ -28,7 +29,7 @@ export class OpenELISEnvironment {
     const config = fileURLToPath(new URL('./openelis.lima.yaml', import.meta.url));
     const args = ['limactl', 'start', '--tty=false', '--name', this.name, '--mount-none', '--timeout', `${this.plan.startupSeconds}s`];
     if (process.platform === 'darwin') args.push('--vm-type', 'vz', '--rosetta');
-    await this.call('worker-start', [...args, config], { signal, timeoutMs: remaining(), maxBytes: 16 * 1024 * 1024 });
+    await this.call('worker-start', [...args, config], { signal, timeoutMs: remaining(), maxBytes: 64 * 1024 * 1024 });
     const setup = await readFile(new URL('./openelis-start.sh', import.meta.url), 'utf8');
     await this.call('openelis-start', ['limactl', 'shell', '--workdir', '/', this.name, 'sg', 'docker', '-c', `bash -s -- ${this.plan.snapshot.head}`],
       { input: setup, signal, timeoutMs: remaining(), maxBytes: 32 * 1024 * 1024 });
@@ -43,13 +44,23 @@ export class OpenELISEnvironment {
     return { id: 'openelis-authentication-smoke', status: report.assertions.every(a => a.passed) ? 'pass' : 'fail',
       executed: report.assertions.length, assertions: report.assertions, head: report.head, endpoints: report.endpoints };
   }
+  async runtimeIdentity(signal) {
+    const script=await readFile(new URL('./openelis-runtime.py',import.meta.url),'utf8');
+    const result=await this.call('runtime-identity',['limactl','shell','--workdir','/',this.name,'sg','docker','-c','python3 -'],{input:script,signal,timeoutMs:120_000});
+    return JSON.parse(result.stdout.trim());
+  }
   async runCheck(check, signal) {
     const script = await readFile(new URL('./openelis-check.py', import.meta.url), 'utf8');
     const payload = Buffer.from(JSON.stringify({ check, head: this.plan.snapshot.head })).toString('base64');
     const result = await this.call('check-' + check.id,
       ['limactl', 'shell', '--workdir', '/', this.name, 'sg', 'docker', '-c', 'python3 - ' + payload],
-      { input: script, signal, timeoutMs: (check.timeoutSeconds + 30) * 1000, maxBytes: 16 * 1024 * 1024 });
+      { input: script, signal, timeoutMs: (check.timeoutSeconds + 30) * 1000, maxBytes: 64 * 1024 * 1024 });
     return validateCheckResult(JSON.parse(result.stdout.trim()), check, this.plan.snapshot.head);
+  }
+  async runProbe(probe,signal) {
+    const {payload,...options}=await probeProgram(this.plan,probe,'~/review/source');
+    const result=await this.call('probe-'+probe.id,['limactl','shell','--workdir','/',this.name,'sg','docker','-c','python3 - '+payload],{...options,signal});
+    return JSON.parse(result.stdout.trim());
   }
   async collect() {
     if (!this.owned) return;
