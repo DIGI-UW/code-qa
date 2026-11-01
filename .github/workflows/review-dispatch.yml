@@ -1,0 +1,67 @@
+name: Trusted review dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: GitHub PR URL to inspect as data
+        required: true
+        type: string
+      level:
+        description: Source review only in this hosted-runner profile
+        required: true
+        default: L1
+        type: choice
+        options: [L1, L2]
+      model:
+        description: Explicit Codex model for L2; no automatic upgrade
+        required: true
+        default: gpt-6.1-sol
+        type: string
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    # The workflow must be dispatched from trusted main, never a candidate ref.
+    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 15
+    environment: code-qa-review
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test && npm run lint
+      - name: Install trusted reviewer CLI
+        if: inputs.level == 'L2'
+        run: npm install --global @openai/codex@0.165.0
+      - name: Review pinned source without checking out or executing PR code
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          REVIEW_PR: ${{ inputs.pr }}
+          REVIEW_LEVEL: ${{ inputs.level }}
+          REVIEW_MODEL: ${{ inputs.model }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$REVIEW_LEVEL" == L2 ]]; then
+            test -n "$OPENAI_API_KEY"
+            printf '%s' "$OPENAI_API_KEY" | codex login --with-api-key
+            node review/cli.mjs review --pr "$REVIEW_PR" --level L2 --model "$REVIEW_MODEL" --reasoning-effort low --review-seconds 120 --config examples/ci/source-review.json --out "$RUNNER_TEMP/code-qa-runs"
+          else
+            node review/cli.mjs review --pr "$REVIEW_PR" --level L1 --config examples/ci/source-review.json --out "$RUNNER_TEMP/code-qa-runs"
+          fi
+      - name: Retain reports (publication remains a separate action)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-qa-review-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/code-qa-runs/*/result.json
+            ${{ runner.temp }}/code-qa-runs/*/report.md
+            ${{ runner.temp }}/code-qa-runs/*/history.json
+          if-no-files-found: warn

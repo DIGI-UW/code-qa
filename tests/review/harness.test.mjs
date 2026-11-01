@@ -195,7 +195,7 @@ test('Codex inspects pinned diffs and unlisted callers with a read-only session'
   assert.ok(args.includes('--ignore-user-config')); assert.ok(args.includes('--ignore-rules'));
   assert.equal(args[args.indexOf('--sandbox') + 1], 'read-only');
   assert.ok(!args.some(a => a.includes('dangerously')));
-  assert.ok(args.includes('shell_tool'));
+  assert.equal(args[args.indexOf('shell_tool')-1],'--disable');
   assert.equal(args[args.indexOf('code_mode_host') - 1], '--enable');
   const dir = join(f.dir, 'codex'); await mkdir(dir);
   await writeFile(join(f.repo, 'value.js'), 'dirty content');
@@ -210,7 +210,8 @@ test('Codex inspects pinned diffs and unlisted callers with a read-only session'
     assert.equal(await git(repo, ['remote']), '');
     assert.equal(await git(repo, ['ls-tree', '--name-only', 'review-head', '--', 'private-untracked']), '');
     await writeFile(argv[argv.indexOf('--output-last-message') + 1], JSON.stringify(cleanReport(plan.snapshot.head)));
-    return { code: 0, stdout: JSON.stringify({ type: 'item.completed', item: { type: 'command_execution', command: 'git show review-head:value.js', exit_code: 0 } }) + '\n' + JSON.stringify({ type: 'turn.completed', usage: { output_tokens: 3 } }) + '\n' };
+    await writeFile(join(options.cwd,'inspection.jsonl'),JSON.stringify({tool:'inspect',success:true})+'\n');
+    return { code: 0, stdout: JSON.stringify({ type: 'item.completed', item: { type: 'mcp_tool_call', server:'codeqa',tool:'inspect' } }) + '\n' + JSON.stringify({ type: 'turn.completed', usage: { output_tokens: 3 } }) + '\n' };
   });
   assert.equal(result.usage.output_tokens, 3);
   assert.equal(result.inspection.commands, 1);

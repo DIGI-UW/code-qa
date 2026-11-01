@@ -1,3 +1,4 @@
+import {reviewWithClaude} from './claude.mjs';
 import { reviewWithCodex } from './codex.mjs';
 
 // Trusted adapters declare capabilities, not model tiers. Plans cannot register
@@ -10,6 +11,15 @@ const adapters = {
     validate(plan) {
       if (typeof plan.model !== 'string' || !plan.model.trim() || /[\x00-\x1f]/.test(plan.model)) throw new Error('Choose a nonempty model ID');
       if (!['low', 'medium', 'high'].includes(plan.reasoningEffort)) throw new Error('Unsupported Codex reasoning effort');
+    },
+  },
+  claude: {
+    evidence:['source-review','behavior-assessment'],
+    capabilities:{source:true,images:false,checkRequests:true,structuredOutput:true,cancellation:true,usage:true,hardCurrencyLimit:false},
+    review:reviewWithClaude,
+    validate(plan) {
+      if(typeof plan.model!=='string'||!plan.model.trim()||/[\x00-\x1f]/.test(plan.model))throw new Error('Choose a nonempty model ID');
+      if(!['low','medium','high'].includes(plan.reasoningEffort))throw new Error('Unsupported Claude reasoning effort');
     },
   },
 };
