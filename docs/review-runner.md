@@ -67,6 +67,7 @@ into dollars. L1 is the default; legacy rigor aliases select L1/L3, with the sam
 
 A source-only L2 review does not claim runtime acceptance. Missing necessary context,
 unassessed areas or unanswered verification questions yield partial/undetermined.
+Reports put work outside the selected level in `scopeNotes`, rendered as “Outside this review.” Reading tests at L2 does not claim their execution; an unselected runtime test is not itself a source-coverage omission. Missing necessary source or an unanswered in-scope question remains partial. Explicit partial reports are never silently upgraded.
 The area rationales are model judgments, not independently validated factual proof.
 Large files are not rejected before review.
 
@@ -182,6 +183,7 @@ Codex and Claude receive pinned source through a read-only operation broker, wit
 ## Reports and exit codes
 
 Each run retains `plan.json`, `packet.json`, `result.json`, `report.md` and logs.
+Source preparation checks for missing Git objects without fetching from a promisor remote. If objects are missing, explicitly materialize the pinned trees in the source checkout and create a new run. Preparation failures retain their stage and sanitized Git diagnostic in `reviewer/repository-error.txt` (or the attached source subdirectory); no AI review starts for an unavailable snapshot.
 The report shows scope, level, model/limits, executed assertions, evidence-linked
 findings, dispositions, counterevidence, area assessments, unanswered questions, omissions and cleanup. Source quotes, including those from unchanged files discovered during review, are
 checked against exact committed lines and retained in `packet.json`. Unread source

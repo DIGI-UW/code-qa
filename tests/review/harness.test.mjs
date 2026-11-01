@@ -410,3 +410,22 @@ test('readable report retains visual differences even when the scoped functional
   assert.match(text,/Unchecked inputs are hidden instead of visible disabled inputs/);
   assert.match(text,/Readback height 26/);assert.match(text,/draft-editor/);assert.match(text,/saved, screenshot/);
 });
+
+
+test('L2 scope notes remain visible without clearing genuine review gaps', async t => {
+  const f=await fixture(t), p=await planFor(f,ai);
+  const report={...cleanReport(p.snapshot.head),scopeNotes:['Runtime tests and CI acceptance were not performed in this source review.']};
+  const result=await runReview(p,f.output,{reviewer:async()=>({report})});
+  assert.equal(result.run.status,'complete'); assert.equal(result.run.assessment,'no_findings');
+  assert.match(await readFile(join(result.directory,'report.md'),'utf8'),/Outside this review[\s\S]*Runtime tests and CI acceptance/);
+  const missing=await planFor(f,ai);
+  report.assessments.find(a=>a.area==='consumers').status='unverified';
+  report.assessments.find(a=>a.area==='consumers').reason='Required downstream parser source is unavailable.';
+  const partial=await runReview(missing,f.output,{reviewer:async()=>({report})});
+  assert.equal(partial.run.status,'partial'); assert.equal(partial.run.assessment,'undetermined');
+  assert.match(partial.run.reasons.join(' '),/downstream parser/);
+  report.assessments.find(a=>a.area==='consumers').status='assessed';
+  report.coverage='partial';report.omissions=['The remaining caller has not been inspected.'];
+  const omitted=await runReview(await planFor(f,ai),f.output,{reviewer:async()=>({report})});
+  assert.equal(omitted.run.status,'partial');
+});

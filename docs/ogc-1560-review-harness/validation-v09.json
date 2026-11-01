@@ -1,0 +1,51 @@
+{
+  "date": "2026-11-01",
+  "scope": "Native stack campaign reporting follow-up",
+  "automated": {
+    "tests": 95,
+    "passed": 95,
+    "failed": 0,
+    "skillsValidated": 7,
+    "focusedFinalSourceStackTests": 15
+  },
+  "regressions": [
+    "Out-of-scope L2 notes stay visible without clearing missing consumers or explicit omissions",
+    "Generated combined and selected-layer schemas reject attached consumers as stack layers",
+    "Partial clone fails before AI without implicit object acquisition and succeeds after explicit materialization",
+    "Git failure stage and diagnostic retained with URL userinfo and query redaction"
+  ],
+  "live": {
+    "runId": "8281db55-5d1d-4081-b446-9e626ae2df85",
+    "level": "L2",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": "low",
+    "head": "826d270bc1fd41cf345f458a337d4c297c98ee33",
+    "status": "complete",
+    "assessment": "no_findings",
+    "sourceInspections": 79,
+    "stackPRs": [
+      4851,
+      4854,
+      4875,
+      4890
+    ],
+    "consumer": "8ffce45b6f716baba53d387784210c971b29cba3",
+    "coverageIds": [
+      "design",
+      "pr-4851",
+      "pr-4854",
+      "pr-4875",
+      "pr-4890",
+      "combined"
+    ],
+    "scopeNotes": [
+      "Runtime tests and CI acceptance were not performed in this source review. Publication and merge acceptance were not assessed."
+    ],
+    "artifactDirectory": "/Users/pmanko/.codex/visualizations/2026/10/22/01a16543-82e0-7360-9587-a838bf3839a7/harness-reporting-fix/runs/8281db55-5d1d-4081-b446-9e626ae2df85"
+  },
+  "limits": [
+    "No source-review result establishes application runtime, CI or merge acceptance.",
+    "Old partial campaign records remain unchanged.",
+    "One live adapter run and deterministic regressions do not establish independent review accuracy."
+  ]
+}

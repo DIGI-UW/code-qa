@@ -5,6 +5,7 @@ export const reviewerSchema = {
   properties: {
     schemaVersion: { type: 'integer', const: 2 }, head: { type: 'string' }, summary: { type: 'string' },
     coverage: { type: 'string', enum: ['complete', 'partial'] }, omissions: { type: 'array', items: { type: 'string' } },
+    scopeNotes: { type: 'array', items: { type: 'string' } },
     assessments: { type: 'array', items: {
       type: 'object', additionalProperties: false,
       properties: {
@@ -88,7 +89,7 @@ export function validateSchema(value, schema, label = 'report') {
       validateSchema(child, schema.properties[key], `${label}.${key}`);
     }
   } else if (schema.type === 'array') {
-    if (!Array.isArray(value) || value.length < (schema.minItems ?? 0)) throw new Error(`${label}: invalid array`);
+    if (!Array.isArray(value) || value.length < (schema.minItems ?? 0) || value.length > (schema.maxItems ?? Infinity)) throw new Error(`${label}: invalid array`);
     value.forEach((child, i) => validateSchema(child, schema.items, `${label}[${i}]`));
   } else if (schema.type === 'integer' ? !Number.isInteger(value) : typeof value !== schema.type) throw new Error(`${label}: invalid type`);
   if (schema.const !== undefined && value !== schema.const) throw new Error(`${label}: invalid constant`);
@@ -155,6 +156,7 @@ export function renderReport(run) {
   if(run.acceptance) lines.push('', '## Product acceptance', '', ...run.acceptance.deviations.map(d=>'- Deviation: '+d),...run.acceptance.gaps.map(g=>'- Unverified: '+g),...(run.acceptance.referenceNotes??[]).map(n=>'- Reference: '+n));
   if (run.plan.stack) lines.push('', '## Native gh stack', '', `Selection: ${run.plan.stack.selection}. Trunk: ${run.plan.stack.trunk}.`, ...run.plan.stack.layers.map(l => `- [${l.id}](${l.pullRequest.url}): ${l.base} → ${l.head}${l.base !== l.mergeBase ? ' (needs restacking)' : ''}`), '', 'Checks executed by this run apply only to the selected candidate. Combined tests do not prove every intermediate layer works.');
   if (run.reviewer) {
+    if(run.reviewer.scopeNotes?.length) lines.push('', '## Outside this review', '', ...run.reviewer.scopeNotes.map(note => '- ' + note));
     if(run.reviewer.stackCoverage) lines.push('', '## Stack review coverage', '', ...run.reviewer.stackCoverage.map(c => `- ${c.id}: ${c.status} — ${c.reason}`));
     for(const workflow of run.reviewer.acceptance??[]) lines.push('', '### Workflow: '+workflow.id+' — '+workflow.status, '',
       workflow.reason, '', 'Observed: '+workflow.observedOutcome, '', 'Saved state: '+workflow.persistedOutcome,

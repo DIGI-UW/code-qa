@@ -290,3 +290,12 @@ Stage 6 evidence: [validation-v08.json](validation-v08.json). The first real
 reviewer attempt exposed a history/thread-ID ambiguity and was rejected; the
 corrected retry completed. This validates coordination and source-review transport,
 not independent security acceptance or model quality.
+
+
+## Campaign reporting follow-up — 1 November 2026
+
+- [x] Separate out-of-scope notes from missing required evidence. Acceptance: an L2 source review can complete with a visible runtime disclaimer; missing consumers, unresolved questions and explicit partial reports remain incomplete. Higher-level evidence requirements are unchanged.
+- [x] Constrain generated stack coverage IDs. Acceptance: combined and selected-layer schemas reject an attached distribution ID, while the consumer assessment preserves its source trace. Missing layers still prevent completion.
+- [x] Preflight pinned source objects and retain useful errors. Acceptance: a real partial clone stops before AI without an implicit remote fetch, then succeeds after explicit source acquisition; retained diagnostics identify the stage and redact URL credentials.
+
+Validation and the live adapter result are recorded in [validation-v09.json](validation-v09.json). These repairs do not retroactively upgrade earlier partial reports or establish independent review quality.

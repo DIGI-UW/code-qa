@@ -54,7 +54,7 @@ invent compatibility code or repair branches.
 5. Run the combined candidate's applicable integration and user workflows.
 
 The reviewer must report coverage for design, every current layer and combined
-behavior. Missing or unverified entries produce partial coverage. This checks
+behavior. The generated output schema restricts coverage IDs to those selected stack entries. Attached consumer/dependency IDs belong in the consumers assessment and combined rationale, not in `stackCoverage`. Missing or unverified entries produce partial coverage. This checks
 report completeness, not whether the model's judgment is correct.
 
 Levels keep their existing evidence obligations. Choose L3 for meaningful

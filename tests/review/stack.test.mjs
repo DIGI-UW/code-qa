@@ -10,7 +10,7 @@ import {createPlan, validatePlan} from '../../review/plan.mjs';
 import {prepareReview} from '../../review/reviewers/prepare.mjs';
 import {inspect} from '../../review/reviewers/broker.mjs';
 import {runReview} from '../../review/run.mjs';
-import {validateReviewer} from '../../review/report.mjs';
+import {validateSchema,validateReviewer} from '../../review/report.mjs';
 import {publication} from '../../review/exchange.mjs';
 import {identifyFindings} from '../../review/history.mjs';
 import {cleanReport} from './fixtures.mjs';
@@ -183,4 +183,26 @@ test('a finding already raised in a GitHub thread stays in that discussion rathe
   assert.equal(result.status,'duplicate');assert.equal(result.existing[0].thread,'known-thread');assert.equal(f.posts.length,0);
   const packet=await packetFor(plan);await captureSourceEvidence(report,packet);
   report.findings[0].existingThreadId='unknown-thread';assert.throws(()=>validateReviewer(report,packet,[]),/unknown owning-PR review thread/);
+});
+
+
+test('provider coverage schema distinguishes stack layers from attached consumers', async t => {
+  const f=await fixture(t);
+  for (const selection of ['combined','pr-2']) {
+    const source=selection==='combined' ? await collectStack(f.repo,f.options) : await collectStack(f.repo,{...f.options,layerNumber:2});
+    const plan=await createPlan({...source,level:'L2',sources:[{id:'distribution',repo:f.repo,repository:'example/distribution',revision:f.second,role:'consumer',required:true}]});
+    const packet=await packetFor(plan), dir=join(f.root,selection);await mkdir(dir);
+    const prepared=await prepareReview(plan,packet,[],dir);
+    const schema=JSON.parse(await readFile(prepared.schema,'utf8')).properties.stackCoverage.anyOf[0];
+    const expected=selection==='combined'?['design','pr-1','pr-2','combined']:['design','pr-2'];
+    assert.deepEqual(schema.items.properties.id.enum,expected);
+    validateSchema(expected.map(id=>({id,status:'assessed',reason:'Source trace complete'})),schema);
+    assert.throws(()=>validateSchema([{id:'distribution',status:'assessed',reason:'Consumer traced'}],schema),/invalid value/);
+    assert.match(prepared.input,/Attached dependency\/consumer source IDs never belong in stackCoverage/);
+    assert.match(prepared.input,/scopeNotes records work outside this review/);
+    const report={...cleanReport(plan.snapshot.head),stackCoverage:coverage(plan.stack),scopeNotes:['No runtime claim.']};
+    report.assessments.find(a=>a.area==='consumers').reason='Traced the attached distribution consumer.';
+    const result=await runReview(plan,join(f.root,'runs'),{freshness:p=>isStackFresh(p,f.execute),reviewer:async()=>({report})});
+    assert.equal(result.run.status,'complete');
+  }
 });

@@ -107,9 +107,13 @@ export async function isStackFresh(plan, execute = command) {
   return true;
 }
 
+export function stackCoverageIds(stack) {
+  if (!stack) return [];
+  return stack.selection === 'combined' ? ['design', ...stack.layers.map(l => l.id), 'combined'] : ['design', stack.selection];
+}
 export function stackCoverageGaps(report, stack) {
   if (!stack) return [];
-  const expected = stack.selection === 'combined' ? ['design', ...stack.layers.map(l => l.id), 'combined'] : ['design', stack.selection];
+  const expected = stackCoverageIds(stack);
   const entries = report.stackCoverage ?? [], gaps = [];
   for (const id of expected) {
     const rows = entries.filter(e => e.id === id);
