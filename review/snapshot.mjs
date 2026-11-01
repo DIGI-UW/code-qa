@@ -1,3 +1,4 @@
+import {inspectStack} from './stack.mjs';
 import { inspectSources } from './sources.mjs';
 import { resolve } from 'node:path';
 import { command, requireSuccess } from './process.mjs';
@@ -32,11 +33,12 @@ export async function packetFor(plan) {
   // Source is read from the pinned repository on demand, never packed to a byte allowance.
   for (const path of [...changed, ...plan.contextPaths]) sourcePath(path);
   const sources = await inspectSources(plan.sources ?? [],snap);
-  return { sources:sources.sources, schemaVersion: 2, sourceAccess: 'repository', snapshot: snap,
+  const stack = await inspectStack(plan.stack, snap.repo);
+  return { stack, sources:sources.sources, schemaVersion: 2, sourceAccess: 'repository', snapshot: snap,
     application: plan.application, question: plan.question,
     decisions: plan.decisions ?? [], history: plan.history ?? null, purpose: plan.purpose, requirements: plan.requirements, selectedPaths: changed,
     contextNotes: plan.contextNotes ?? [], pullRequest: plan.pullRequest ? { url: plan.pullRequest.url, title: plan.pullRequest.title, body: plan.pullRequest.body, checks: plan.pullRequest.checks, checksWarning: plan.pullRequest.checksWarning, conversation: plan.pullRequest.conversation } : null,
-    contextPaths: plan.contextPaths, files: [], omissions: sources.gaps };
+    contextPaths: plan.contextPaths, files: [], omissions: [...sources.gaps, ...(stack?.gaps ?? [])] };
 }
 
 // Retain only cited source as evidence. Unchanged callers are valid evidence too.
@@ -48,7 +50,7 @@ export async function captureSourceEvidence(report, packet) {
     const attached = evidence.sourceId ? packet.sources.find(s=>s.id===evidence.sourceId && s.available) : null;
     if(evidence.sourceId && !attached) throw new Error('Unavailable cited source');
     const repo = attached?.repo ?? packet.snapshot.repo;
-    const revision = attached?.revision ?? (evidence.side === 'base' ? packet.snapshot.mergeBase : packet.snapshot.head);
+    const revision = attached ? (evidence.side === 'base' ? attached.mergeBase : attached.revision) : (evidence.side === 'base' ? packet.snapshot.mergeBase : packet.snapshot.head);
     const tree = await git(repo, ['ls-tree', '-z', revision, '--', path]);
     const entry = tree.split('\0').find(line => line.endsWith('\t' + path));
     const [mode, type, oid] = (entry?.split('\t')[0] ?? '').split(' ');

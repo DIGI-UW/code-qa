@@ -1,5 +1,12 @@
 # Implementation and validation
 
+## Version 0.6 follow-up — 1 November 2026: campaign reporting
+
+Native stack reviews now constrain generated coverage IDs to the selected layers, and distinguish visible out-of-scope notes from actual missing evidence. Source preparation detects missing Git objects before the reviewer starts and retains the failing stage plus sanitized Git diagnostics. The regression suite has 95 passing tests and all seven skills validate; see [validation-v09.json](validation-v09.json) for the live adapter result. A fresh low-effort Sol L2 review of the four-PR installation stack and its pinned distribution completed with 79 source inspections, valid coverage IDs, visible scope notes and no actionable findings.
+
+The harness supports L1–L5 and native stack coordination, but its eight PRs remain unmerged drafts. Independent held-out quality adjudication and unattended public-fork deployment acceptance remain open in the [roadmap](roadmap.md). Hosted native-stack dispatch and automatic per-layer execution scheduling are separate extensions. Earlier source-review campaigns do not establish L3–L5 acceptance of the analyzer/security changes.
+
+
 ## Version 0.5 — 30 October 2026: implemented methods and explicit acceptance limits
 
 The current implementation supports evidence-based L1–L5, isolated test/probe execution, loaded-runtime verification, rendered product/design comparisons, Codex and Claude source review, managed-result exchange, explicit publication, and paired quality evaluation. Use the [execution guide](execution-guide.md), [evaluation guide](evaluation-guide.md), and [OpenELIS preparation profile](../../examples/openelis/REVIEW.md). The [checklist](roadmap.md) and [current evidence record](validation-v07.json) distinguish implemented tooling from independent quality acceptance. Entries below are historical.

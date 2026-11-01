@@ -33,3 +33,6 @@ export async function configurationRequirements(snap, config) {
   }
   return parts.join('\n\n');
 }
+
+// An unmerged lower PR is review data, not trusted execution configuration.
+export const configurationSnapshot = (snap, stack) => stack ? {...snap, base: stack.layers[0].base} : snap;

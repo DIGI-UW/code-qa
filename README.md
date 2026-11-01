@@ -52,10 +52,26 @@ node install.mjs --target /path/to/host-repo
 - `evidence-bundle`: `ffmpeg` (webm→mp4) and `zip` on PATH.
 - Local review runner: Node.js 20+ and Git. Acceptance tests also need Python 3. Optional model review: authenticated Codex or Claude CLI. Generic check execution: Docker. OpenELIS execution: Lima 2+, virtualization and sufficient build resources.
 
+## Native gh stack reviews
+
+Use a checkout already managed by `gh stack`. The harness reads the published
+stack without checking out, rebasing, pushing or merging its branches:
+
+```sh
+node review/cli.mjs plan --stack --repo /path/to/feature-checkout --level L2 --out /path/to/evidence/stack-plan.json
+node review/cli.mjs run --plan /path/to/evidence/stack-plan.json --out /path/to/evidence/runs
+```
+
+This reviews shared design, each PR's own diff, and combined behavior with one
+reviewer. Level, provider/model and execution settings remain independent.
+Use `--stack-layer PR_NUMBER` for a specific intermediate candidate and
+`--previous-stack OLD_PLAN` when reassessing a restacked series. See the
+[native stack guide](docs/stack-review.md) for evidence scope and supported limits.
+
 ## License
 MIT — see [LICENSE](LICENSE).
 
-## Local review harness (v0.5)
+## Local review harness (v0.6)
 
 Review an existing PR without checking it out in an application worktree:
 

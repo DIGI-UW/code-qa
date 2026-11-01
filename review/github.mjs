@@ -1,3 +1,4 @@
+import {isStackFresh} from './stack.mjs';
 import { mkdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -67,6 +68,7 @@ export async function collectPR(url, repoPath, execute = command) {
   return { repo, base: info.baseRefOid, head: info.headRefOid, pullRequest: { ...info, conversation, observedAt: new Date().toISOString(), checks, checksWarning } };
 }
 export async function isPRFresh(plan, execute = command) {
+  if (plan.stack) return isStackFresh(plan, execute);
   if (!plan.pullRequest) return true;
   const current = await readPR(plan.pullRequest, execute);
   return current.state === 'OPEN' && current.baseRefOid === plan.snapshot.base && current.headRefOid === plan.snapshot.head;

@@ -2,7 +2,7 @@
 
 Updated 30 October 2026. This is the implementation roadmap following the requirements audit of code-qa v0.3 at `853a24d557cc451bce89ca8743fcf52a807de6fb`.
 
-**Implementation status: Stages 1–5 are implemented in v0.5. The current stack is PRs #1, #2, #4–#8; nothing is merged.** Controlled execution and adapter evidence are recorded in [validation-v07.json](validation-v07.json). Independent quality acceptance is still open: provisional labels are not ground truth, and the held-out evaluation has not run. Public-fork automation is not enabled.
+**Implementation status: Stages 1–5 execution capabilities shipped in v0.5. Native gh stack coordination is tracked separately below for v0.6; the original G06 completion claim overstated snapshot attachment support. The implementation remains on the unmerged code-qa stack.** Controlled execution and adapter evidence are recorded in [validation-v07.json](validation-v07.json). Independent quality acceptance is still open: provisional labels are not ground truth, and the held-out evaluation has not run. Public-fork automation is not enabled.
 
 This checklist supersedes the earlier milestone sequence and the interpretation of L1–L5 as effort presets. See the [specification](specification.md), [goals](goals.md), [historical implementation evidence](implementation-status.md), and [20-gap audit](gap-inventory.json). Gap IDs below are stable links to that audit.
 
@@ -101,8 +101,8 @@ Scope is independent of level. L1 may execute existing deterministic probes; L2 
 
 ### G06 — Review the assembled stack and both sides of contracts
 
-- [x] Represent ordered PR stacks, dependency revisions and the assembled candidate.
-- [x] **Acceptance:** Resolve ordered stack/dependency revisions and the assembled state without merging upstream. Compare emitted and consumed contracts and relevant configuration. A fixture with two individually passing layers that fail together must be detected and attributed to the owning layer. Report stale ancestry/pins separately from code findings.
+- [x] Attach pinned dependency/consumer snapshots and an explicitly chosen candidate (v0.5). Native stack topology, actual layer diff ranges and restack-aware collection are delivered in Stage 6 below.
+- [x] **Acceptance (completed by Stage 6):** Resolve ordered stack/dependency revisions and the assembled state without merging upstream. Compare emitted and consumed contracts and relevant configuration. A fixture with two individually passing layers that fail together must be detected and attributed to the owning layer. Report stale ancestry/pins separately from code findings.
 
 ### G07 — Connect test adequacy and test-layer choice to the runner
 
@@ -244,3 +244,58 @@ Primary sources:
 - [GitHub — safe pull_request_target use](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target)
 
 The [research record](research-and-validation.md) documents reference implementation defects we must not copy. Current and original evidence for each gap is in [gap-inventory.json](gap-inventory.json).
+
+## Stage 6 — Native gh stack coordination (v0.6)
+
+The earlier G06 implementation exposed attached revisions as snapshots, not true
+layer diff ranges. This stage corrects that gap and makes native stacks an
+explicit application of the existing runner. See [usage and boundaries](../stack-review.md).
+
+- [x] **S01 — Collect the native stack.** Use `gh stack view --json`, refresh each
+  published PR, pin order/base/head/merge-base and refuse mixed or moving graphs.
+  Acceptance: real Git fixtures preserve checkout state and reject unpublished,
+  mismatched or reordered PRs. No review action rebases, submits or merges.
+- [x] **S02 — Expose layer and combined diffs.** Reviewer sources include primary
+  trunk-to-top and every pr-N range. Acceptance: lower/upper diffs contain only
+  their respective changes, the combined diff contains both, and base-side
+  quotations resolve to the correct revision.
+- [x] **S03 — Distinguish freshness and ancestry.** Check every PR and topology at
+  collection and execution; report missing current parents separately.
+  Acceptance: changed lower heads stop execution before AI; stable but unrestacked
+  children produce partial results, including L1.
+- [x] **S04 — Require explicit stack review scope.** Shared procedure covers
+  design, each layer, contracts, duplication and combined result. Acceptance:
+  a clean label missing one layer is partial; model/provider remain independent.
+- [x] **S05 — Scope execution to its candidate.** Combined L1 checks every layer;
+  `--stack-layer` supports intermediate build/test/runtime plans. Acceptance:
+  a fixture passes at the top and fails at a selected earlier head; the report
+  never promotes combined tests into prefix evidence.
+- [x] **S06 — Reassess restacked work.** Prior plans expose old layer ranges,
+  changed parents and human-readable range-diff; history remains evidence-backed.
+  Acceptance: an unchanged child patch on a changed parent remains visible for
+  reassessment; old runtime results are not automatically reused.
+- [x] **S07 — Attribute and publish to the owning PR.** One owning current source
+  per actionable finding; publication checks the whole stack and targets the
+  owner's commit. Acceptance: lower-layer finding targets lower head; movement
+  elsewhere prevents posting; no automatic review-thread resolution.
+- [x] **S08 — Validate the live interface.** Collect a real native stack and
+  execute L1 with zero model calls; retain its plan/report. Run all tests and
+  skill lint. Delivery uses gh stack submit and current PR checks; no upstream merge.
+
+Further work is deliberately separate: independently measured AI review quality,
+a hosted native-stack checkout workflow, and automated per-layer execution
+scheduling. Current CLI selection and explicit checks support manual campaigns.
+
+Stage 6 evidence: [validation-v08.json](validation-v08.json). The first real
+reviewer attempt exposed a history/thread-ID ambiguity and was rejected; the
+corrected retry completed. This validates coordination and source-review transport,
+not independent security acceptance or model quality.
+
+
+## Campaign reporting follow-up — 1 November 2026
+
+- [x] Separate out-of-scope notes from missing required evidence. Acceptance: an L2 source review can complete with a visible runtime disclaimer; missing consumers, unresolved questions and explicit partial reports remain incomplete. Higher-level evidence requirements are unchanged.
+- [x] Constrain generated stack coverage IDs. Acceptance: combined and selected-layer schemas reject an attached distribution ID, while the consumer assessment preserves its source trace. Missing layers still prevent completion.
+- [x] Preflight pinned source objects and retain useful errors. Acceptance: a real partial clone stops before AI without an implicit remote fetch, then succeeds after explicit source acquisition; retained diagnostics identify the stage and redact URL credentials.
+
+Validation and the live adapter result are recorded in [validation-v09.json](validation-v09.json). These repairs do not retroactively upgrade earlier partial reports or establish independent review quality.
