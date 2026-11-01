@@ -12,4 +12,4 @@ References validated against current official documentation on 30 October 2026:
 - [Claude CLI](https://code.claude.com/docs/en/cli-reference): restricted tools, explicit MCP configuration, structured output and noninteractive permission policy.
 - [GitHub workflow security](https://docs.github.com/en/actions/reference/security/secure-use): keep untrusted candidate execution away from privileged workflow credentials.
 
-Remaining acceptance is reported in the roadmap: reviewed configuration for each deployment, approved product-design demonstration, independent quality labels/adjudication and broader adversarial evaluation. These are not silently counted as passed by unit tests.
+Remaining acceptance is reported in the roadmap: reviewed configuration for each deployment, independent quality labels/adjudication and broader adversarial evaluation. These are not silently counted as passed by unit tests.

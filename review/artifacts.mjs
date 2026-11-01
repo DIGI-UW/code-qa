@@ -31,7 +31,7 @@ export async function persistArtifacts(check,directory,head) {
 export async function captureDesigns(designs,directory) {
   const records=[];await mkdir(join(directory,'designs'),{recursive:true,mode:0o700});
   for(const d of designs) {
-    if(!['approved','draft'].includes(d.approvalStatus) || !/^[a-z][a-z0-9-]{0,63}$/.test(d.id) || !d.authority?.trim() || !d.source?.trim() || !d.revision?.trim())throw new Error('Design needs identity and approval provenance');
+    if(!['approved','draft','unspecified'].includes(d.approvalStatus) || !/^[a-z][a-z0-9-]{0,63}$/.test(d.id) || !d.authority?.trim() || !d.source?.trim() || !d.revision?.trim())throw new Error('Design needs identity and reference provenance');
     const file=await realpath(d.file),bytes=await readFile(file);
     if(digest(bytes)!==d.sha256)throw new Error('Design changed after planning');
     const target=join(directory,'designs',d.id+extname(file));

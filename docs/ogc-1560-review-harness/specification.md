@@ -37,7 +37,7 @@ Targeted lenses include correctness, architecture/ownership, simplicity, test qu
 
 ### Parameterized L1–L5 — target evidence contract
 
-Level selects evidence obligations, not model effort. Application, scope/lens, provider/model, execution environment and spend settings are independent. Version 0.4 records these obligations and supports L1/L2 coverage reporting. Higher-level verification remains pending and produces explicit partial results before execution. Historical v0.3 labels must not be credited as satisfying this contract.
+Level selects evidence obligations, not model effort. Application, scope/lens, provider/model, execution environment and spend settings are independent. Version 0.5 implements these obligations through declared checks, probes, runtime identity and workflow/design evidence. Missing capabilities or evidence produce explicit partial results. Historical v0.3 labels must not be credited as satisfying this contract.
 
 | Level | Required evidence |
 | --- | --- |
@@ -49,7 +49,7 @@ Level selects evidence obligations, not model effort. Application, scope/lens, p
 
 A targeted review and a full PR review can select any supported level; completion applies only to recorded scope. Missing required evidence is partial/undetermined, never silently downgraded. The standard for a supported finding does not weaken with a lighter level. Necessary focused checks can run at L2; L3 makes applicable test-strength experiments part of its evidence.
 
-**Provider/model policy.** The user's Sol preference applies to inexpensive immature-harness testing, not a permanent product ceiling. Remove the hardcoded allowlist from the generic contract; configure provider/model and supported time/session/spend controls independently. Missing capabilities fail explicitly. No silent paid escalation, fallback or extra reviewers. Version 0.4 removes the old model allowlist and separates the development execution profile; additional adapters and the rest of Stage 1 remain pending.
+**Provider/model policy.** The user's Sol preference applies to inexpensive immature-harness testing, not a permanent product ceiling. Remove the hardcoded allowlist from the generic contract; configure provider/model and supported time/session/spend controls independently. Missing capabilities fail explicitly. No silent paid escalation, fallback or extra reviewers. Version 0.5 separates the development profile and implements Codex/Claude adapters; capability and acceptance limits remain explicit.
 
 **Versioning and acceptance.** Version plans and level semantics; preserve old reports as historical evidence, without relabeling them as completed new-level reviews. The [roadmap](roadmap.md) specifies implementation tasks, positive examples, negative controls and exit evidence at every stage. L1 makes zero AI calls. L4/L5 cannot complete on source review or startup/login alone. Approved refactors/removals may pass unchanged tests or delete obsolete ones.
 
@@ -63,7 +63,7 @@ Supported local interface (install from the checkout with `npm install --global 
 code-qa plan --pr <url> --application pr --level L1 --out plan.json
 code-qa review --pr <url> --application targeted \
   --question "Does this refactor preserve the agreed ownership boundary?" \
-  --level L2 --lens ownership --adapter codex --model <allowed-sol-model> \
+  --level L2 --lens ownership --adapter codex --model <selected-model> \
   --review-seconds 120
 code-qa run --plan <approved-plan.json>
 ```
@@ -97,7 +97,7 @@ Current baseline: `30528d176bd128b4765242d130f38ca9fb85d7b8`, verified against u
 | `commit-pr-hygiene` | Separate deterministic checks, optional editorial guidance and publication policy. Allow repository-preauthorized automatic summaries while preserving explicit authorization for human-facing messages and merge actions. |
 | Installer and lint | Preserve skill installation and add runner/protocol tests. The existing CI validates skill frontmatter; it does not validate review correctness. |
 
-Proposed structure: `review/` for the common protocol, deterministic checks, optional semantic lenses and adapters; `tests/review/` for offline fixtures and protocol tests; `examples/repositories/` for pilot configurations. Agent skills become thin entry points into this procedure. Consolidate ownership/simplicity/spec-alignment rules into one source, with focused entry points referring to it. Retire the runtime-specific `Workflow` template as a required path; preserve any optional multi-reviewer recipe only behind an explicit execution plan, independent of level. Keep evidence-media packaging separate and reusable. Installation remains explicit and preserves existing hooks. Version 0.2 uses `review/` and `tests/review/`, with trusted base-revision repository configuration; remaining adapter interfaces are later work. The runner guide records the implemented subset.
+Proposed structure: `review/` for the common protocol, deterministic checks, optional semantic lenses and adapters; `tests/review/` for offline fixtures and protocol tests; `examples/repositories/` for pilot configurations. Agent skills become thin entry points into this procedure. Consolidate ownership/simplicity/spec-alignment rules into one source, with focused entry points referring to it. Retire the runtime-specific `Workflow` template as a required path; preserve any optional multi-reviewer recipe only behind an explicit execution plan, independent of level. Keep evidence-media packaging separate and reusable. Installation remains explicit and preserves existing hooks. Version 0.5 uses `review/` and `tests/review/`, trusted base-revision configuration, shared provider preparation and restricted source/evidence tools. The runner guide records implemented interfaces and acceptance limits.
 
 Migration must include an inventory of installed skills and policy conflicts, a versioned code-qa release, updated repository pins/installers, and removal of superseded copied procedures. A transition alias may point to the new procedure but may not carry a second implementation. Roll back by pinning the prior release and restoring the prior configuration. Do not install both old and new semantics and leave agents to choose.
 

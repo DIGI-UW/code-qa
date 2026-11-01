@@ -42,6 +42,7 @@ export async function packetFor(plan) {
 // Retain only cited source as evidence. Unchanged callers are valid evidence too.
 export async function captureSourceEvidence(report, packet) {
   for (const finding of report.findings) for (const evidence of finding.evidence) {
+    if(evidence.sourceId==='primary')delete evidence.sourceId;
     if (evidence.kind !== 'source' || packet.files.some(f => f.path === evidence.path && f.side === evidence.side && (f.sourceId ?? '') === (evidence.sourceId ?? ''))) continue;
     const path = sourcePath(evidence.path);
     const attached = evidence.sourceId ? packet.sources.find(s=>s.id===evidence.sourceId && s.available) : null;

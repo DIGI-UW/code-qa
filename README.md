@@ -50,35 +50,29 @@ node install.mjs --target /path/to/host-repo
 
 ## Requirements
 - `evidence-bundle`: `ffmpeg` (webm→mp4) and `zip` on PATH.
-- Local review runner: Node.js 20+ and Git. Acceptance tests also need Python 3. Optional model review: Codex CLI. OpenELIS execution: Lima 2+, virtualization and sufficient build resources.
+- Local review runner: Node.js 20+ and Git. Acceptance tests also need Python 3. Optional model review: authenticated Codex or Claude CLI. Generic check execution: Docker. OpenELIS execution: Lima 2+, virtualization and sufficient build resources.
 
 ## License
 MIT — see [LICENSE](LICENSE).
 
-## Local review harness (v0.4)
+## Local review harness (v0.5)
 
-**Implementation roadmap:** follow the [staged checklist](docs/ogc-1560-review-harness/roadmap.md). Stage 1 is in progress; the runner now distinguishes required evidence from execution settings.
-
-Run a review of an existing PR:
+Review an existing PR without checking it out in an application worktree:
 
 ```sh
-node review/cli.mjs review --pr https://github.com/OWNER/REPO/pull/NUMBER --level L1
+node review/cli.mjs review --pr https://github.com/OWNER/REPO/pull/NUMBER --level L2
 ```
 
-Choose L1 for deterministic checks or L2 for semantic review with explicit intent,
-ownership, consumer and test assessments. L3–L5 require verification capabilities
-that are still pending; they return partial before startup or model spend. Existing
-declared OpenELIS checks remain usable with L1/L2.
+| Level | What it does |
+| --- | --- |
+| L1 | Selected mechanical checks, zero model calls |
+| L2 | Intent, ownership, callers/consumers and test adequacy review |
+| L3 | Focused executed tests, applicable mutation/revert proof and bounded requested experiments |
+| L4 | Running integration, loaded artifact identity, selected persistence/lifecycle scenarios |
+| L5 | Full-stack selected journeys, saved outcomes and rendered comparison with product designs |
 
-The independent development profile defaults to one inexpensive Sol session.
-Override the model explicitly; there is no core Sol/Luna allowlist. Reviewers inspect
-pinned source on demand without a source-byte cap. No automatic model escalation occurs.
+Levels select evidence, not model size. Codex and Claude share restricted source/evidence tools; provider/model, scope, environment and spending settings are independent. The development profile uses inexpensive Sol settings. Missing required evidence stays partial; no automatic model upgrade occurs. Claude image conformance is not yet claimed, so it cannot run L5.
 
-The [runner guide](docs/review-runner.md) includes installation, focused reviews,
-limits, repository configuration and executable examples. Run `npm test` for
-no-credit acceptance tests. The [implementation record](docs/ogc-1560-review-harness/implementation-status.md)
-separates tested capabilities from remaining integrations and quality evaluation.
-The [specification](docs/ogc-1560-review-harness/specification.md) defines the target contract; the checklist tracks implementation. Automatic publication, Claude integration and the model-quality pilot
-are later work.
+Use the [runner guide](docs/review-runner.md) for commands and prerequisites, the [execution guide](docs/ogc-1560-review-harness/execution-guide.md) for check/probe/runtime inputs, and the [evaluation guide](docs/ogc-1560-review-harness/evaluation-guide.md) for repeated baseline comparisons. Run `npm test` and `npm run lint` without model credits.
 
-See the [execution guide](docs/ogc-1560-review-harness/execution-guide.md) for isolated mechanical commands, accepted decisions and re-review history.
+The [checklist](docs/ogc-1560-review-harness/roadmap.md) separates implementation from acceptance. Real OpenELIS runtime/save/readback and rendered comparison have run; formal product sign-off is separate from completed design comparison. Quality labels and held-out adjudication require independent maintainers. The protected manual CI dispatcher is source-only; publication is a separate explicit command. The reviewer never repairs or merges.

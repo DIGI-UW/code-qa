@@ -16,6 +16,7 @@ function integer(value, name, min, max) {
   if (!Number.isInteger(value) || value < min || value > max) throw new Error(`${name} must be an integer in ${min}..${max}`);
 }
 export function validatePlan(plan) {
+  if(plan.reviewMethod!==undefined&&!['plain','harness'].includes(plan.reviewMethod))throw new Error('Unknown evaluation method');
   if (plan.schemaVersion !== 4 || !/^[0-9a-f-]{36}$/.test(plan.id)) throw new Error('Unsupported plan version/id; create a new plan');
   if (!Object.hasOwn(LEVELS, plan.level) || plan.presetVersion !== PRESET_VERSION) throw new Error('Unknown level/preset');
   if (!Object.hasOwn(PROFILES, plan.profile)) throw new Error('Unknown execution profile');
